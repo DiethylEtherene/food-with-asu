@@ -210,6 +210,15 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .picklist button{align-items:center}
 /* fridge */
 .fgroup{margin-bottom:14px}
+.fpantry{border:1px dashed var(--line);border-radius:var(--r);padding:10px 14px;background:var(--surface)}
+.fpantry summary{cursor:pointer;list-style:none}
+.fpantry summary::-webkit-details-marker{display:none}
+.fpantry summary h4{display:inline;margin:0}
+.fpantry summary h4::after{content:" ▾";color:var(--ink-3)}
+.fpantry[open] summary h4::after{content:" ▴"}
+.fpantry summary .note{display:block;margin-top:3px}
+.chip .lowtag{font-size:10px;font-weight:700;color:var(--chilli);text-transform:uppercase;margin-left:2px}
+.chip.addpick{border-style:dashed}
 .fgroup h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 6px;font-family:var(--f-body)}
 .chip.have{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .fsel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:34px;margin:12px 0}
@@ -467,7 +476,7 @@ details.staples summary{cursor:pointer;font-weight:600}
         <div><h2>What can we make?</h2><div class="note">Tap what you've got or want to use up. Recipes are ranked by how much of them you already have. Salt, oil, soy, spices and other cupboard staples are assumed.</div></div>
         <div class="btnrow"><button class="btn" id="fclear">Clear selection</button></div>
       </div>
-      <label class="search"><span aria-hidden="true">⌕</span><input id="fq" type="search" placeholder="Find an ingredient (e.g. prawns, mince, cream)…" autocomplete="off"></label>
+      <label class="search"><span aria-hidden="true">⌕</span><input id="fq" type="search" placeholder="Find an ingredient or seasoning (e.g. prawns, miso, wasabi)…" autocomplete="off"></label>
       <div class="fsel" id="fsel"></div>
       <div id="fchips"></div>
       <div id="fai"></div>
@@ -1789,23 +1798,40 @@ let FSEL=new Set();try{FSEL=new Set(JSON.parse(localStorage.getItem("fwa-fsel")|
 // "must use" picks: Claude's suggestions and the cookbook matches have to include every one of these
 let FMUST=new Set();try{FMUST=new Set(JSON.parse(localStorage.getItem("fwa-fmust")||"[]"))}catch(e){}
 function saveFsel(){for(const k of[...FMUST])if(!FSEL.has(k))FMUST.delete(k);try{localStorage.setItem("fwa-fsel",JSON.stringify([...FSEL]));localStorage.setItem("fwa-fmust",JSON.stringify([...FMUST]))}catch(e){}}
-function usesAll(r,set){if(!set.size)return true;const k=keyIngs(r);return [...set].every(c=>k.has(c))}
-function missingMust(r){const k=keyIngs(r);return [...FMUST].filter(c=>!k.has(c))}
+const isP=k=>k.charAt(0)==="+",dn=k=>isP(k)?k.slice(1):k;
+// does the recipe use this pantry item / seasoning? ("white miso paste" counts for "miso")
+function usesName(r,name){const q=name.toLowerCase();return r.ing.some(i=>{if(i[0]==="—")return false;const n=String(i[2]).toLowerCase();return n.includes(q)||(n.length>3&&q.includes(n))})}
+const usesPick=(r,c,k)=>isP(c)?usesName(r,c.slice(1)):(k||keyIngs(r)).has(c);
+function usesAll(r,set){if(!set.size)return true;const k=keyIngs(r);return [...set].every(c=>usesPick(r,c,k))}
+function missingMust(r){const k=keyIngs(r);return [...FMUST].filter(c=>!usesPick(r,c,k)).map(dn)}
+let FP_OPEN=false;
+const pchip=n=>{const k="+"+n,on=FSEL.has(k);return `<button class="chip${on?" have":""}" data-fing="${esc(k)}" aria-pressed="${on}">${esc(n)}${pState(n)===2?` <small class="lowtag">low</small>`:""}</button>`};
+function pantryPicks(q,count){
+  if(q){
+    const names=[...pantryAll().keys()].filter(n=>n.includes(q)).sort((a,b)=>(pState(b)>0)-(pState(a)>0)||a.length-b.length).slice(0,24);
+    const exact=names.includes(q)||count.has(q);
+    return `<div class="fgroup"><h4>Pantry &amp; seasonings</h4><div class="chips" style="margin:0">${names.map(pchip).join("")}${exact?"":`<button class="chip addpick" data-fing="${esc("+"+q)}">+ Use “${esc(q)}”</button>`}</div></div>`;
+  }
+  const mine=Object.keys(S.pantry||{}).sort();
+  return `<details class="fgroup fpantry"${FP_OPEN?" open":""}><summary><h4>From your pantry (${mine.length})</h4><span class="note">Seasonings, sauces and other long-lasting things. Pick one to cook with it, then ☆ it to make it a must.</span></summary>
+    ${mine.length?`<div class="chips" style="margin:6px 0 0">${mine.map(pchip).join("")}</div>`:`<p class="note" style="margin:6px 0 0">Nothing ticked in the Pantry tab yet. You can still search above for any seasoning, e.g. miso or wasabi.</p>`}</details>`;
+}
 function renderFridge(){
   if(!$("#tab-fridge"))return;
   const count=new Map(),grp=new Map();
   for(const r of RECIPES)for(const[c,g]of keyIngs(r)){count.set(c,(count.get(c)||0)+1);grp.set(c,g)}
   const q=($("#fq")?.value||"").trim().toLowerCase();
   const groups=["Protein","Carbs","Veg","Dairy","Cupboard"];
-  $("#fsel").innerHTML=FSEL.size?`<span class="note" style="width:100%">Picked. Tap ☆ to make something a <b>must use</b>:</span>`+[...FSEL].map(k=>{const m=FMUST.has(k);return `<span class="selchip${m?" must":""}"><button class="mustbtn" data-fmust="${esc(k)}" aria-pressed="${m}" title="${m?"Must be in the recipe":"Tap to require it in the recipe"}">${m?"★":"☆"}</button><span class="selname">${esc(k)}${m?" <small>must use</small>":""}</span><button class="selx" data-fing="${esc(k)}" aria-label="Remove ${esc(k)}">×</button></span>`}).join(""):`<span class="note">Nothing picked yet. Tap ingredients below.</span>`;
+  $("#fsel").innerHTML=FSEL.size?`<span class="note" style="width:100%">Picked. Tap ☆ to make something a <b>must use</b>:</span>`+[...FSEL].map(k=>{const m=FMUST.has(k);return `<span class="selchip${m?" must":""}"><button class="mustbtn" data-fmust="${esc(k)}" aria-pressed="${m}" title="${m?"Must be in the recipe":"Tap to require it in the recipe"}">${m?"★":"☆"}</button><span class="selname">${esc(dn(k))}${m?" <small>must use</small>":""}</span><button class="selx" data-fing="${esc(k)}" aria-label="Remove ${esc(dn(k))}">×</button></span>`}).join(""):`<span class="note">Nothing picked yet. Tap ingredients below.</span>`;
   $("#fchips").innerHTML=groups.map(g=>{const items=[...count.entries()].filter(([c])=>grp.get(c)===g&&(!q||c.includes(q))).sort((a,b)=>b[1]-a[1]);
-    if(!items.length)return"";return `<div class="fgroup"><h4>${g}</h4><div class="chips" style="margin:0">${items.map(([c])=>`<button class="chip${FSEL.has(c)?" have":""}" data-fing="${esc(c)}" aria-pressed="${FSEL.has(c)}">${esc(c)}</button>`).join("")}</div></div>`}).join("");
+    if(!items.length)return"";return `<div class="fgroup"><h4>${g}</h4><div class="chips" style="margin:0">${items.map(([c])=>`<button class="chip${FSEL.has(c)?" have":""}" data-fing="${esc(c)}" aria-pressed="${FSEL.has(c)}">${esc(c)}</button>`).join("")}</div></div>`}).join("")+pantryPicks(q,count);
   // rank
   const close=$("#fclose")?.checked;
   let res=[];
   const PC=new Set();for(const n of Object.keys(S.pantry||{})){const c=canon(n,"cupboard");if(c)PC.add(c[0])}
   if(FSEL.size){for(const r of RECIPES){if(isHidden(r))continue;const k=keyIngs(r);let tot=0,got=0,mainHit=0;const miss=[];
       for(const c of k.keys()){const w=MINOR.has(c)?0.4:1;tot+=w;if(FSEL.has(c)){got+=w;if(!MINOR.has(c))mainHit++}else if(PC.has(c))got+=w;else miss.push(c)}
+      for(const c of FSEL)if(isP(c)&&usesName(r,c.slice(1)))mainHit++;
       if(!mainHit||!usesAll(r,FMUST))continue;const score=tot?got/tot:0;const mainMiss=miss.filter(c=>!MINOR.has(c));
       if(close&&mainMiss.length>2)continue;res.push({r,score,miss,mainMiss})}
     res.sort((a,b)=>b.score-a.score||a.mainMiss.length-b.mainMiss.length);}
@@ -1815,6 +1841,7 @@ function renderFridge(){
   renderAiBox();
 }
 document.addEventListener("input",e=>{if(e.target.id==="fq")renderFridge()});
+document.addEventListener("toggle",e=>{if(e.target.classList&&e.target.classList.contains("fpantry"))FP_OPEN=e.target.open},true);
 document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="fclose")renderFridge();
   else if(t.id==="mpOn"){
@@ -1828,8 +1855,8 @@ document.addEventListener("change",e=>{const t=e.target;
 let SAMPLE=null,aiCtl=null,AI_RESULTS=[],AI_STATE="idle",AI_MSG="";
 function renderAiBox(){
   const el=$("#fai");if(!el)return;
-  if(!SAMPLE){el.innerHTML=FSEL.size?`<div class="aibox"><h3>Want something new?</h3><p class="note" style="margin:6px 0 0">Connect Claude to your kitchen (tap <b>Kitchen</b> at the top), then ask in any Claude chat, e.g. “what can we make with prawns and cream?”. It can save recipes straight into here.</p></div>`:"";return}
-  el.innerHTML=`<div class="aibox"><div class="planhead" style="margin:0"><div><h3>Ask Claude for new ideas</h3><div class="note">Claude suggests 3 recipes using ${FSEL.size?"what you've picked":"whatever you pick above"}, for ${S.people}, with everything buyable at Sainsbury's or Waitrose. It uses your own Claude account. Claude sticks to what you've picked plus your Pantry, with at most 2 things to buy${FMUST.size?`, and must use ${esc([...FMUST].join(", "))}`:""}.${Object.keys(S.pantry||{}).length?"":" <b>Tick your Pantry first</b> so Claude knows what you've got."}</div></div>
+  if(!SAMPLE){el.innerHTML=FSEL.size?`<div class="aibox"><h3>Want something new?</h3><p class="note" style="margin:6px 0 0">Connect Claude to your kitchen (tap <b>Kitchen</b> at the top), then ask in any Claude chat, e.g. “what can we make with prawns and cream?”. It can save recipes straight into here.</p><div class="btnrow" style="margin-top:10px"><button class="btn small" id="faicopy">Copy a request for Claude</button><span class="note">Paste it into a Claude chat with the Food with Asu connector on.</span></div></div>`:"";return}
+  el.innerHTML=`<div class="aibox"><div class="planhead" style="margin:0"><div><h3>Ask Claude for new ideas</h3><div class="note">Claude suggests 3 recipes using ${FSEL.size?"what you've picked":"whatever you pick above"}, for ${S.people}, with everything buyable at Sainsbury's or Waitrose. It uses your own Claude account. Claude sticks to what you've picked plus your Pantry, with at most 2 things to buy${FMUST.size?`, and must use ${esc([...FMUST].map(dn).join(", "))}`:""}.${Object.keys(S.pantry||{}).length?"":" <b>Tick your Pantry first</b> so Claude knows what you've got."}</div></div>
    <div class="btnrow">${AI_STATE==="busy"?`<button class="btn" id="faistop">Stop</button>`:`<button class="btn primary" id="faiask" ${FSEL.size?"":"disabled"}>${AI_RESULTS.length?"Suggest 3 more":"Suggest 3 recipes"}</button>`}</div></div>
    ${AI_MSG?`<p class="note" style="margin:10px 0 0">${esc(AI_MSG)}</p>`:""}
    <div class="aires">${AI_RESULTS.map((r,i)=>`<div class="aicard"><div><b>${esc(r.n)}</b>${r.zh?` <span class="zh">${esc(r.zh)}</span>`:""}<div class="note">${fmtMin(r.time)} · serves ${r.serves} · ${esc(r.blurb||"")}</div>${r.miss&&r.miss.length?`<div class="buy over">Doesn't use: ${esc(r.miss.join(", "))}</div>`:""}${r.buy?`<div class="buy ${r.buy.length>2?"over":""}">${r.buy.length?`To buy: ${esc(r.buy.join(", "))}${r.buy.length>2?" (more than 2, so tick anything you already have in the Pantry)":""}`:"Nothing to buy, you have it all"}</div>`:""}</div><div class="btnrow"><button class="btn small" data-aiopen="${i}">Open</button>${r.saved?`<span class="note">Saved</span>`:`<button class="btn small primary" data-aisave="${i}">Save to cookbook</button>`}<button class="ib" data-aidismiss="${i}" aria-label="Dismiss this suggestion">Dismiss</button></div></div>`).join("")}</div></div>`;
@@ -1850,17 +1877,19 @@ const FREE=new Set(["salt","water","black pepper","salt & black pepper","salt & 
 function needsToBuy(r){
   const pc=new Set();for(const n of Object.keys(S.pantry||{})){const c=canon(n,"cupboard");if(c)pc.add(c[0])}
   const out=[];for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();
-    if(FREE.has(n)||inPantry(n)||/optional/i.test(i[4]||""))continue;const c=canon(n,i[3]);if(c&&(FSEL.has(c[0])||pc.has(c[0])))continue;out.push(n)}
+    if(FREE.has(n)||inPantry(n)||/optional/i.test(i[4]||""))continue;
+    if([...FSEL].some(k=>isP(k)&&(n.includes(k.slice(1))||k.slice(1).includes(n))))continue;const c=canon(n,i[3]);if(c&&(FSEL.has(c[0])||pc.has(c[0])))continue;out.push(n)}
   return [...new Set(out)];
 }
 async function askClaude(){
   if(!SAMPLE||!FSEL.size||AI_STATE==="busy")return;
   aiCtl=new AbortController();AI_STATE="busy";AI_MSG="Thinking… this usually takes 20–60 seconds.";renderAiBox();
-  const have=[...FSEL].join(", ");const avoid=[...RECIPES,...AI_RESULTS].map(r=>r.n).slice(0,160).join("; ");
+  const have=[...FSEL].filter(k=>!isP(k)).join(", ")||"nothing fresh picked";const flav=[...FSEL].filter(isP).map(dn);const avoid=[...RECIPES,...AI_RESULTS].map(r=>r.n).slice(0,160).join("; ");
   const pan=Object.keys(S.pantry||{}).sort().join(", ");
   const prompt=`You are helping a couple in the UK plan dinner. They shop at Sainsbury's and Waitrose and like rice dishes, Chinese food and pasta, and are open to anything.
-Fresh ingredients they have / want to use: ${have}.${FMUST.size?`
-MUST USE: every recipe has to include ALL of these (they're using them up): ${[...FMUST].join(", ")}.`:""}
+Fresh ingredients they have / want to use: ${have}.${flav.length?`
+Seasonings / pantry things they specifically want to cook with: ${flav.join(", ")}. Treat these as available.`:""}${FMUST.size?`
+MUST USE: every recipe has to include ALL of these and make them a real part of the dish: ${[...FMUST].map(dn).join(", ")}.`:""}
 Their pantry (long-lasting things they already own): ${pan||"not filled in yet, so assume only salt, pepper, cooking oil and soy sauce"}.
 Kitchen: hob, oven and an air fryer. Cooking for ${S.people}.
 STRICT RULE: build each recipe ONLY from the fresh ingredients and the pantry above. Salt, pepper and water are free. Each recipe may need AT MOST 2 other ingredients they'd have to buy, and fewer is better (0 is best). List those in "extras". Don't sneak in garnishes or sauces they don't have; leave them out instead. Anything extra must be easy to get at Sainsbury's or Waitrose.
@@ -2125,6 +2154,9 @@ document.addEventListener("click",e=>{
   if(d.fmust){const k=d.fmust;if(FMUST.has(k))FMUST.delete(k);else FMUST.add(k);saveFsel();renderFridge();return}
   if(t.id==="fclear"){FSEL.clear();FMUST.clear();saveFsel();renderFridge();return}
   if(t.id==="faiask"){askClaude();return}
+  if(t.id==="faicopy"){const fresh=[...FSEL].filter(k=>!isP(k)),flav=[...FSEL].filter(isP).map(dn);
+    const txt=`Using my Food with Asu kitchen (check the pantry first), suggest 3 recipes I could cook for ${S.people}${fresh.length?` with ${fresh.join(", ")}`:""}${flav.length?`${fresh.length?", flavoured with":" using"} ${flav.join(", ")}`:""}.${FMUST.size?` Each one must use ${[...FMUST].map(dn).join(", ")}.`:""} Stick to what I have plus my pantry, with at most 2 things to buy from Sainsbury's or Waitrose. Then save the one I pick to the cookbook.`;
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("Copied. Paste it into Claude."),()=>fallbackCopy(txt));return}
   if(t.id==="faistop"){aiCtl?.abort();return}
   if(d.aiopen){const r=AI_RESULTS[+d.aiopen];if(r){byId[r.id]=r;openRecipe(r.id)}return}
   if(d.aisave){saveCustom(AI_RESULTS[+d.aisave]);return}
