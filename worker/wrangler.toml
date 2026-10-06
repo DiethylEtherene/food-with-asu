@@ -1,0 +1,17 @@
+name = "food-with-asu"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# One Durable Object per kitchen: holds the shared plan, pantry and saved recipes,
+# and pushes changes to everyone who has the app open.
+[[durable_objects.bindings]]
+name = "KITCHEN"
+class_name = "Kitchen"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Kitchen"]
+
+[vars]
+# Pages allowed to call the sync API from a browser (the MCP endpoint is called server-side by Claude).
+ALLOWED_ORIGINS = "https://diethyletherene.github.io,http://localhost:8765,http://127.0.0.1:8765"
