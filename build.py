@@ -42,11 +42,12 @@ rep("Not in the cookbook? Open this page inside Claude to ask Claude for a recip
 
 # Kitchen button in the header
 rep('<div><span class="forlabel">Cooking for</span>',
-    '<div class="hdrr"><button class="btn small kbtn" id="kbtn">Share</button><span class="forlabel">Cooking for</span>')
+    '<div class="hdrr"><button class="btn small kbtn" id="kbtn">👥 Link up with a code</button><span class="forlabel">Cooking for</span>')
 
 css = """
 .hdrr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.kbtn{margin-right:10px;display:inline-flex;align-items:center;gap:6px}
+.kbtn{margin-right:10px;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.kbtn .kdot{background:var(--accent-ink)}
 .kdot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
 .kcode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
 .kcode .mono{font-size:22px;font-weight:600;letter-spacing:.06em;color:var(--accent);word-break:break-all}

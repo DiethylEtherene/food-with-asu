@@ -89,7 +89,7 @@ function renderKitchen() {
   $("#sheet").innerHTML = `<div class="scrim" data-scrim><article class="sheet kitchen" role="dialog" aria-modal="true" aria-label="Kitchen">
     <button class="close" data-closesheet aria-label="Close">×</button>${body}${KC_ERR ? `<p class="err" role="alert">${esc2(KC_ERR)}</p>` : ""}</article></div>`;
 }
-function kitchenBtn() { const b = document.getElementById("kbtn"); if (b) b.innerHTML = KCODE ? `<i class="kdot"></i>Kitchen` : "Share"; }
+function kitchenBtn() { const b = document.getElementById("kbtn"); if (b) b.innerHTML = KCODE ? `<i class="kdot"></i>Kitchen · ${KCODE.slice(0, 4)}` : "👥 Link up with a code"; }
 async function kStart() {
   KC_BUSY = true; KC_ERR = ""; renderKitchen();
   try {
