@@ -57,7 +57,7 @@ window.claude = { use: async name => (name === "db" && KCODE ? kitchenDb(KCODE) 
 
 // a kitchen that no longer exists: drop the link rather than retrying forever
 if (KCODE) fetch(`${API_BASE}/api/k/${encodeURIComponent(KCODE)}`).then(r => r.json()).then(x => {
-  if (x && x.exists === false) { kcSave(null); toast("That kitchen code no longer works, so this device is on its own again."); setTimeout(() => location.reload(), 1800); }
+  if (x && x.exists === false) { kcSave(null); toast("That sync code no longer works, so this device is on its own again."); setTimeout(() => location.reload(), 1800); }
 }).catch(() => {});
 
 /* ---- Kitchen panel ---- */
@@ -65,31 +65,52 @@ let KC_ERR = "", KC_BUSY = false;
 function renderKitchen() {
   const esc2 = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const body = KCODE ? `
-    <div class="eyebrow">Your kitchen</div><h2>Shared kitchen</h2>
-    <p class="note">Everyone with this code shares the plan, pantry, shopping list and saved recipes, live. Anyone with the code can change things, so only give it to people you cook with.</p>
+    <div class="eyebrow">Synced</div><h2>You're synced</h2>
+    <p class="note">This device is linked to a shared kitchen. Everyone using the code below sees the same thing, live:</p>
+    <ul class="kwhy">
+      <li><b>📅 One weekly plan.</b> Plan meals together; change a dinner on your phone and it changes on theirs.</li>
+      <li><b>🛒 One shopping list.</b> Whoever's at Sainsbury's ticks things off, and the other sees it straight away, so nothing gets bought twice.</li>
+      <li><b>🫙 One pantry.</b> Mark the soy sauce as running low and it lands on the shared list.</li>
+      <li><b>📖 Shared recipes.</b> Recipes either of you writes or saves from Claude show up for both.</li>
+    </ul>
+    <h4>Your sync code</h4>
     <div class="kcode"><span class="mono">${esc2(KCODE)}</span><button class="btn small" data-kcopy="${esc2(KCODE)}">Copy code</button></div>
-    <h4>Connect Claude</h4>
-    <p class="note">Let Claude find and write recipes, plan your week and update the pantry for this kitchen, from any Claude chat on your own Claude account.</p>
+    <p class="note">To add someone, send them this code. They open this site, tap <b>👥 Sync with a friend</b>, and enter it under <b>Got a code?</b>. Anyone with the code can see and change your plan, so only give it to people you cook with.</p>
+    <h4>Connect Claude (optional)</h4>
+    <p class="note">Let Claude find and write recipes, plan your week and update the pantry for you, from any Claude chat on your own Claude account.</p>
     <ol class="ksteps">
       <li>In Claude (claude.ai or the app), open <b>Settings → Connectors</b> and choose <b>Add custom connector</b>.</li>
       <li>Name it <b>Food with Asu</b> and paste this URL:<div class="kcode url"><span class="mono">${esc2(connectorUrl())}</span><button class="btn small" data-kcopy="${esc2(connectorUrl())}">Copy URL</button></div></li>
       <li>In a chat, switch the connector on from the tools menu, then ask things like <i>“find me a recipe for 鸡翅包虾滑 and save it”</i>, <i>“what can we make with prawns and cream?”</i> or <i>“plan dinners next week, nothing over 30 min on weekdays”</i>.</li>
     </ol>
-    <p class="note">The URL contains your kitchen code, so treat it like the code. Custom connectors may need a paid Claude plan.</p>
-    <div class="btnrow" style="margin-top:22px"><button class="ib danger" id="kleave">Leave this kitchen</button><span class="note">This device keeps a copy of everything.</span></div>`
+    <p class="note">The URL contains your sync code, so treat it like the code. Custom connectors may need a paid Claude plan.</p>
+    <div class="btnrow" style="margin-top:22px"><button class="ib danger" id="kleave">Stop syncing on this device</button><span class="note">This device keeps a copy of everything; the others carry on as before.</span></div>`
   : `
-    <div class="eyebrow">Kitchen</div><h2>Cook together</h2>
-    <p class="note">Right now everything is saved on this device only. Start a kitchen to get a code. Anyone who enters it shares your plan, pantry, shopping list and saved recipes, and changes show up for everyone straight away.</p>
-    <div class="btnrow" style="margin:14px 0 22px"><button class="btn primary" id="kstart" ${KC_BUSY ? "disabled" : ""}>${KC_BUSY ? "Starting…" : "Start a kitchen"}</button></div>
+    <div class="eyebrow">Sync with a friend</div><h2>Cook together, on one plan</h2>
+    <p class="note">Share this app with your partner, housemates or a friend, so you're all looking at the same thing on your own phones:</p>
+    <ul class="kwhy">
+      <li><b>📅 One weekly plan.</b> Plan meals together; change a dinner on your phone and it changes on theirs.</li>
+      <li><b>🛒 One shopping list.</b> Whoever's at Sainsbury's ticks things off, and the other sees it straight away, so nothing gets bought twice.</li>
+      <li><b>🫙 One pantry.</b> Mark the soy sauce as running low and it lands on the shared list.</li>
+      <li><b>📖 Shared recipes.</b> Recipes either of you writes or saves from Claude show up for both.</li>
+    </ul>
+    <p class="note">No accounts or sign-ups: you link up with a code. Right now everything is saved on this device only.</p>
+    <h4>How it works</h4>
+    <ol class="ksteps">
+      <li><b>One person</b> taps <b>Start syncing</b> below and gets a code like <span class="mono">K7QM-4XPA-9RTE</span>. What's on their device becomes the shared plan.</li>
+      <li>They send the code to everyone else.</li>
+      <li><b>Everyone else</b> opens this site, taps <b>👥 Sync with a friend</b>, and enters the code under <b>Got a code?</b></li>
+    </ol>
+    <div class="btnrow" style="margin:14px 0 22px"><button class="btn primary" id="kstart" ${KC_BUSY ? "disabled" : ""}>${KC_BUSY ? "Starting…" : "Start syncing"}</button><span class="note">You'll get a code to share.</span></div>
     <h4>Got a code?</h4>
-    <form id="kjoin" class="kjoin" autocomplete="off"><input id="kcodein" type="text" inputmode="text" autocapitalize="characters" placeholder="e.g. K7QM-4XPA-9RTE" maxlength="20" aria-label="Kitchen code"><button class="btn" type="submit" ${KC_BUSY ? "disabled" : ""}>Join</button></form>
-    <p class="note">Joining shows that kitchen's plan on this device instead of what's here now.</p>
-    <h4>Connect Claude</h4>
-    <p class="note">Once you're in a kitchen, you can connect your own Claude account so Claude can find recipes, plan your week and save straight into the app.</p>`;
-  $("#sheet").innerHTML = `<div class="scrim" data-scrim><article class="sheet kitchen" role="dialog" aria-modal="true" aria-label="Kitchen">
+    <form id="kjoin" class="kjoin" autocomplete="off"><input id="kcodein" type="text" inputmode="text" autocapitalize="characters" placeholder="e.g. K7QM-4XPA-9RTE" maxlength="20" aria-label="Sync code"><button class="btn" type="submit" ${KC_BUSY ? "disabled" : ""}>Join</button></form>
+    <p class="note">Joining shows the shared plan on this device instead of what's here now.</p>
+    <h4>Bonus: connect Claude</h4>
+    <p class="note">Once you're synced, you can also connect your own Claude account so Claude can find recipes, plan your week and save straight into the app.</p>`;
+  $("#sheet").innerHTML = `<div class="scrim" data-scrim><article class="sheet kitchen" role="dialog" aria-modal="true" aria-label="Sync with a friend">
     <button class="close" data-closesheet aria-label="Close">×</button>${body}${KC_ERR ? `<p class="err" role="alert">${esc2(KC_ERR)}</p>` : ""}</article></div>`;
 }
-function kitchenBtn() { const b = document.getElementById("kbtn"); if (b) b.innerHTML = KCODE ? `<i class="kdot"></i>Kitchen · ${KCODE.slice(0, 4)}` : "👥 Link up with a code"; }
+function kitchenBtn() { const b = document.getElementById("kbtn"); if (b) b.innerHTML = KCODE ? `<i class="kdot"></i>Synced · ${KCODE.slice(0, 4)}` : "👥 Sync with a friend"; }
 async function kStart() {
   KC_BUSY = true; KC_ERR = ""; renderKitchen();
   try {
@@ -100,12 +121,12 @@ async function kStart() {
 }
 async function kJoin(raw) {
   const s = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (s.length !== 12) { KC_ERR = "Kitchen codes have 12 letters and numbers, like K7QM-4XPA-9RTE."; renderKitchen(); return; }
+  if (s.length !== 12) { KC_ERR = "Sync codes have 12 letters and numbers, like K7QM-4XPA-9RTE."; renderKitchen(); return; }
   const code = `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
   KC_BUSY = true; KC_ERR = ""; renderKitchen();
   try {
     const x = await (await fetch(`${API_BASE}/api/k/${code}`)).json();
-    if (!x.exists) { KC_BUSY = false; KC_ERR = "No kitchen with that code. Check it with whoever sent it."; renderKitchen(); return; }
+    if (!x.exists) { KC_BUSY = false; KC_ERR = "No one is syncing with that code. Check it with whoever sent it."; renderKitchen(); return; }
     kcSave(code); try { localStorage.removeItem(LS); localStorage.removeItem(LSC); } catch (e) {}
     location.reload();
   } catch (e) { KC_BUSY = false; KC_ERR = "Couldn't reach the server. Check your connection and try again."; renderKitchen(); }
@@ -116,7 +137,7 @@ document.addEventListener("click", e => {
   const cp = e.target.closest("[data-kcopy]");
   if (cp) { const t = cp.dataset.kcopy; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Copied"), () => fallbackCopy(t)); return; }
   const lv = e.target.closest("#kleave");
-  if (lv) { if (!lv.dataset.armed) { lv.dataset.armed = "1"; lv.textContent = "Tap again to leave"; return; } kcSave(null); location.reload(); }
+  if (lv) { if (!lv.dataset.armed) { lv.dataset.armed = "1"; lv.textContent = "Tap again to stop syncing"; return; } kcSave(null); location.reload(); }
 });
 document.addEventListener("submit", e => { if (e.target.id === "kjoin") { e.preventDefault(); kJoin(document.getElementById("kcodein").value); } });
 document.addEventListener("DOMContentLoaded", kitchenBtn);

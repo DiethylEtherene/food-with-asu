@@ -36,13 +36,13 @@ rep("Suggested by Claude from what was in the fridge", '${r.via==="chat"?"Writte
 
 # the AI boxes: no built-in Claude on a normal website, so point at the connector
 rep("Open this page in Claude to have Claude invent recipes from what you've picked.",
-    "Connect Claude to your kitchen (tap <b>Kitchen</b> at the top), then ask in any Claude chat, e.g. “what can we make with prawns and cream?”. It can save recipes straight into here.")
+    "Sync, then connect Claude (tap <b>👥 Sync with a friend</b> at the top), then ask in any Claude chat, e.g. “what can we make with prawns and cream?”. It can save recipes straight into here.")
 rep("Not in the cookbook? Open this page inside Claude to ask Claude for a recipe for “${esc(q)}”.",
-    "Not in the cookbook? Connect Claude (tap <b>Kitchen</b> at the top) and ask it for “${esc(q)}”. It can save the recipe straight into here.")
+    "Not in the cookbook? Sync and connect Claude (tap <b>👥 Sync with a friend</b> at the top) and ask it for “${esc(q)}”. It can save the recipe straight into here.")
 
 # Kitchen button in the header
 rep('<div><span class="forlabel">Cooking for</span>',
-    '<div class="hdrr"><button class="btn small kbtn" id="kbtn">👥 Link up with a code</button><span class="forlabel">Cooking for</span>')
+    '<div class="hdrr"><button class="btn small kbtn" id="kbtn">👥 Sync with a friend</button><span class="forlabel">Cooking for</span>')
 
 css = """
 .hdrr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -52,6 +52,8 @@ css = """
 .kcode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
 .kcode .mono{font-size:22px;font-weight:600;letter-spacing:.06em;color:var(--accent);word-break:break-all}
 .kcode.url .mono{font-size:13px;letter-spacing:0;color:var(--ink)}
+.kwhy{list-style:none;padding:0;margin:10px 0 14px;display:grid;gap:8px;font-size:14.5px;line-height:1.45}
+.kwhy li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .ksteps{padding-left:20px;display:grid;gap:10px;font-size:14.5px;line-height:1.5}
 .kjoin{display:flex;gap:8px;margin:8px 0}
 .kjoin input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:9px 12px;font:inherit;font-family:var(--f-mono,monospace);text-transform:uppercase;letter-spacing:.05em}
