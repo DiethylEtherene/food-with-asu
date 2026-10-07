@@ -65,6 +65,10 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 .sync{font-size:12px;color:var(--ink-3)}
 .seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;padding:6px 12px;border-radius:999px;font-weight:600;font-size:13px;color:var(--ink-2)}
+.seg.ppl{align-items:center}
+.seg.ppl button{width:30px;padding:6px 0;font-size:16px;line-height:1}
+.seg.ppl button:disabled{opacity:.35}
+.seg.ppl span{min-width:74px;text-align:center;font-weight:600;font-size:13px;color:var(--ink);background:var(--surface);border-radius:999px;padding:6px 8px;box-shadow:var(--shadow)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .forlabel{font-size:12px;color:var(--ink-3);margin-right:6px}
 nav.tabs{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
@@ -431,8 +435,8 @@ details.staples summary{cursor:pointer;font-weight:600}
   <header class="top">
     <div class="brandrow">
       <div class="brand"><h1>Food with <span>Asu</span></h1><span class="sync" id="sync">Saved on this device</span></div>
-      <div class="hdrr"><button class="btn small kbtn" id="kbtn">👥 Sync with a friend</button><span class="forlabel">Cooking for</span><div class="seg" role="group" aria-label="Cooking for">
-        <button id="p1" aria-pressed="false">1 person</button><button id="p2" aria-pressed="true">2 people</button>
+      <div class="hdrr"><button class="btn small kbtn" id="kbtn">👥 Sync with a friend</button><span class="forlabel">Cooking for</span><div class="seg ppl" role="group" aria-label="Cooking for">
+        <button id="pminus" aria-label="Fewer people">−</button><span id="pcount" aria-live="polite">2 people</span><button id="pplus" aria-label="More people">+</button>
       </div></div>
     </div>
     <nav class="tabs" role="tablist">
@@ -1740,7 +1744,7 @@ let toastT;function toast(t){$("#toast").innerHTML=`<div class="toast" role="sta
 /* ============ EVENTS ============ */
 function renderAll(){
   rebuildGroups();
-  $("#p1").setAttribute("aria-pressed",S.people===1);$("#p2").setAttribute("aria-pressed",S.people===2);
+  $("#pcount").textContent=`${S.people} ${S.people>1?"people":"person"}`;$("#pminus").disabled=S.people<=1;$("#pplus").disabled=S.people>=12;
   renderChips();renderBook();renderPlan();renderShop();renderFridge();renderPantry();renderAskBox();
 }
 /* ============ PANTRY ============ */
@@ -2202,7 +2206,7 @@ document.addEventListener("click",e=>{
   if(t.id==="afclear"){ASK_FILE=null;renderAskBox();return}
   if(d.aidismiss){AI_RESULTS.splice(+d.aidismiss,1);renderAiBox();return}
   if(d.tab){document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b===t));["book","plan","fridge","pantry","shop"].forEach(k=>$("#tab-"+k).hidden=k!==d.tab);try{localStorage.setItem("fwa-tab",d.tab)}catch(x){}window.scrollTo(0,0);return}
-  if(t.id==="p1"||t.id==="p2"){const np=t.id==="p1"?1:2;if(np!==S.people){const old=S.people;S.people=np;
+  if(t.id==="pminus"||t.id==="pplus"){const np=Math.max(1,Math.min(12,S.people+(t.id==="pplus"?1:-1)));if(np!==S.people){const old=S.people;S.people=np;
     for(const[k]of DAYS)for(const m of["l","d"]){const s=S.week[k][m];if(s&&s.r&&s.p===old)s.p=np}
     S.prep.forEach(b=>{if(b.p%old===0)b.p=b.p/old*np});commit();toast(`Cooking for ${np}. Portions and the list are updated.`)}return}
   if(d.cat){filter.cat=d.cat;renderChips();renderBook();return}
