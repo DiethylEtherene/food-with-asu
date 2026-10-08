@@ -243,6 +243,9 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .stackinfo{font-size:12px;color:var(--ink-2);line-height:1.4}
 .stackinfo b{color:var(--accent)}
 .stacklist{display:grid;gap:10px;margin-top:14px}
+#plist .pkstack{position:relative;box-shadow:4px 4px 0 -1px var(--surface-2),4px 4px 0 0 color-mix(in srgb,var(--accent) 35%,var(--line));margin-right:4px}
+#plist .pkstack .note b{color:var(--accent)}
+#plist .pksub{margin-left:22px;border-left:2px solid var(--accent-soft)}
 .stackrow2{display:grid;grid-template-columns:88px 1fr auto;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px;font:inherit;color:var(--ink);cursor:pointer}
 .stackrow2:hover{border-color:var(--accent)}
 .stackrow2 img,.stackrow2 .sth{width:88px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block}
@@ -1530,9 +1533,16 @@ function renderPickList(q){
   list=list.filter(r=>!isHidden(r)&&pfMatch(r,pickFilter)&&(!q||(r.n+" "+(r.zh||"")+" "+r.by+" "+r.tags.join(" ")+" "+r.ing.map(i=>i[2]).join(" ")).toLowerCase().includes(q)));
   let html="";
   if(!isPrep&&S.prep.length&&pickFilter==="all"&&!q)html+=`<div class="eyebrow" style="padding:6px 10px">From your prep batches</div>`+S.prep.map((b,i)=>byId[b.r]?`<button data-pk="prep:${i}">${pkRow(byId[b.r])}<span class="note">prep box</span></button>`:"").join("")+`<div class="eyebrow" style="padding:10px 10px 6px">Recipes</div>`;
-  html+=list.map(r=>`<button data-pk="${r.id}">${pkRow(r)}<span class="note mono">${fmtMin(r.time)}${r.prep?" · prep":""}</span></button>`).join("")||`<p class="note" style="padding:10px">No recipes match.</p>`;
+  // versions of one dish sit under one stacked row that opens to show them
+  const row=(r,cls,extra)=>`<button data-pk="${r.id}"${cls?` class="${cls}"`:""}>${pkRow(r)}<span class="note mono">${extra?esc(extra)+" · ":""}${fmtMin(r.time)}${r.prep?" · prep":""}</span></button>`;
+  const inList=new Set(list.map(r=>r.id)),done=new Set();
+  html+=list.map(r=>{const G=GROUP_OF[r.id];if(!G)return row(r);if(done.has(G.g))return"";done.add(G.g);
+    const ms=G.v.filter(([id])=>inList.has(id));if(ms.length<2)return row(r);const open=PK_OPEN.has(G.g)||!!q;
+    return `<button class="pkstack${open?" open":""}" data-pkstack="${esc(G.g)}" aria-expanded="${open}">${pkRow(byId[ms[0][0]])}<span class="note"><b>⧉ ${ms.length} versions</b> ${open?"▴":"▾"}</span></button>`
+      +(open?ms.map(([id,l])=>row(byId[id],"pksub",l)).join(""):"")}).join("")||`<p class="note" style="padding:10px">No recipes match.</p>`;
   $("#plist").innerHTML=html;
 }
+const PK_OPEN=new Set();
 function pkRow(r){return `<span class="pkr">${pic(r.id)?`<img src="${pic(r.id)}" alt="" loading="lazy">`:`<i class="sdot" style="background:${PROTEIN[r.pro][1]}"></i>`}<span>${esc(r.n)}${r.zh?` <span class="note">${esc(r.zh)}</span>`:""}</span></span>`}
 function pick(v){
   if(pickTarget==="prep"){S.prep.push({r:v,p:S.people*4,manual:true})}
@@ -1745,9 +1755,10 @@ function renderFridge(){
       for(const c of FSEL)if(isP(c)&&usesName(r,c.slice(1)))mainHit++;
       if(!mainHit||!usesAll(r,FMUST))continue;const score=tot?got/tot:0;const mainMiss=miss.filter(c=>!MINOR.has(c));
       if(close&&mainMiss.length>2)continue;res.push({r,score,miss,mainMiss})}
-    res.sort((a,b)=>b.score-a.score||a.mainMiss.length-b.mainMiss.length);}
+    res.sort((a,b)=>b.score-a.score||a.mainMiss.length-b.mainMiss.length);
+    const seenG=new Set();res=res.filter(x=>{const G=GROUP_OF[x.r.id];if(!G)return true;if(seenG.has(G.g))return false;seenG.add(G.g);return true});}
   $("#fres").innerHTML=!FSEL.size?`<div class="empty-state" style="grid-column:1/-1">Pick a few ingredients and the matching recipes show up here.</div>`
-   :res.length?res.slice(0,30).map(x=>card(x.r).replace(`<div class="meta">`,`<div class="match">Have <b>${Math.round(x.score*100)}%</b>${x.mainMiss.length?` · <span class="miss">Need: ${esc(x.mainMiss.slice(0,4).join(", "))}${x.mainMiss.length>4?"…":""}</span>`:" · you have all the main things"}</div><div class="meta">`)).join("")
+   :res.length?res.slice(0,30).map(x=>card(x.r,true).replace(`<div class="meta">`,`<div class="match">Have <b>${Math.round(x.score*100)}%</b>${x.mainMiss.length?` · <span class="miss">Need: ${esc(x.mainMiss.slice(0,4).join(", "))}${x.mainMiss.length>4?"…":""}</span>`:" · you have all the main things"}</div><div class="meta">`)).join("")
    :`<div class="empty-state" style="grid-column:1/-1">Nothing in the cookbook uses that combination${FMUST.size?" (with every ★ must-use item)":""}${close?" with 2 or fewer extras. Untick the filter above":""}. Try asking Claude for an idea.</div>`;
   renderAiBox();
 }
@@ -2179,6 +2190,7 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
   if(d.stackpick){const o=$("#stack-sel")?.value;if(!o){toast("Choose a recipe to stack with");return}stackTogether(d.stackpick,o);openRecipe(d.stackpick,sheetP);toast("Stacked");return}
   if(d.unstack){unstack(d.unstack);openRecipe(d.unstack,sheetP);toast("Unstacked. It's its own card again.");return}
   if(d.stack){openStack(d.stack);return}
+  if(d.pkstack){PK_OPEN.has(d.pkstack)?PK_OPEN.delete(d.pkstack):PK_OPEN.add(d.pkstack);renderPickList();return}
   if(d.stackchoose){setVpref(d.stackchoose);renderBook();openRecipe(d.stackchoose);return}
   if(d.vopen){setVpref(d.vopen);openRecipe(d.vopen,sheetP);renderBook();return}
   if(d.variant){const[k,m]=d.variant.split(".");const x=S.week[k][m];if(!x||!x.r)return;const sib=siblings(x.r).filter(id=>id===x.r||!isHidden(byId[id]));const nx=sib[(sib.indexOf(x.r)+1)%sib.length];if(nx===x.r)return;pushUndo();x.r=nx;commit();toast(`Switched to ${byId[nx].n}`);return}
