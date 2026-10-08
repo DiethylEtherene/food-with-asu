@@ -235,6 +235,21 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .tag.prep{background:var(--accent-soft);color:var(--accent)}
 .tag.spicy{background:var(--chilli-soft);color:var(--chilli)}
 .vtog{display:flex;gap:4px;flex-wrap:wrap}
+.card.stacked{position:relative;box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 color-mix(in srgb,var(--accent) 35%,var(--line));margin:0 6px 6px 0}
+.card.stacked.s3{box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 color-mix(in srgb,var(--accent) 35%,var(--line)),12px 12px 0 -1px var(--surface-2),12px 12px 0 0 color-mix(in srgb,var(--accent) 25%,var(--line));margin:0 12px 12px 0}
+.card.stacked:hover{box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 var(--accent),12px 12px 0 -1px var(--surface-2),12px 12px 0 0 color-mix(in srgb,var(--accent) 50%,var(--line))}
+.card.stacked .thumb{position:relative}
+.card .thumb span.stackbadge,.card .thumb.ph span.stackbadge{position:absolute;top:10px;right:10px;background:var(--accent);color:var(--accent-ink);font-family:var(--f-body);font-size:12px;font-weight:700;line-height:1.2;padding:5px 10px;border-radius:999px;box-shadow:var(--shadow);text-align:left}
+.stackinfo{font-size:12px;color:var(--ink-2);line-height:1.4}
+.stackinfo b{color:var(--accent)}
+.stacklist{display:grid;gap:10px;margin-top:14px}
+.stackrow2{display:grid;grid-template-columns:88px 1fr auto;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px;font:inherit;color:var(--ink);cursor:pointer}
+.stackrow2:hover{border-color:var(--accent)}
+.stackrow2 img,.stackrow2 .sth{width:88px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block}
+.stackrow2 .sth{display:grid;place-items:center;font-weight:800;font-size:13px;line-height:1.15;padding:4px;text-align:center;color:color-mix(in srgb,var(--pc) 70%,var(--ink));background:color-mix(in srgb,var(--pc) 18%,var(--surface))}
+.stackrow2 .stx{display:grid;gap:3px}
+.stackrow2 .stx b{font-size:15.5px;line-height:1.25}
+.stackrow2 .sgo{font-size:24px;color:var(--ink-3);padding-right:6px}
 .vtog .v{font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--surface);color:var(--ink-2);cursor:pointer}
 .vtog .v[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .vtog .v .mono{font-weight:500;opacity:.8;margin-left:4px}
@@ -1243,15 +1258,16 @@ function matches(r){
   const hay=[r.n,r.zh||"",r.by,...(r.vids||[]).map(v=>v[1]),r.cat,r.pro,...r.tags,...r.ing.map(i=>i[2])].join(" ").toLowerCase();
   return q.split(/\s+/).every(w=>hay.includes(w));
 }
-function card(r){
+function card(r,stackable){
   const [pn,pc]=PROTEIN[r.pro];
   const tg=[];if(r.prep)tg.push(`<span class="tag prep">meal prep</span>`);if(r.tags.includes("spicy"))tg.push(`<span class="tag spicy">spicy</span>`);
   r.tags.filter(t=>!["spicy","meal prep"].includes(t)).slice(0,2).forEach(t=>tg.push(`<span class="tag">${esc(t)}</span>`));
   if(r.src.includes("adapted"))tg.push(`<span class="tag adapt">adapted</span>`);
   const G=GROUP_OF[r.id],vs=G?G.v.filter(([id])=>!isHidden(byId[id])):[];
-  const vt=vs.length>1?`<span class="vtog" role="group" aria-label="Versions">${vs.map(([id,l])=>`<span class="v" role="button" tabindex="0" data-vpick="${id}" aria-pressed="${id===r.id}">${esc(l)}<span class="mono">${fmtMin(byId[id].time)}</span></span>`).join("")}</span>`:"";
-  return `<button class="card" data-open="${r.id}">
-    ${thumbHTML(r)}${vt}
+  const stack=stackable===true&&vs.length>1;
+  const vt=stack?`<div class="stackinfo"><b>${vs.length} versions</b> · ${vs.map(([id,l])=>esc(l)).join(" · ")}</div>`:"";
+  return `<button class="card${stack?` stacked${vs.length>2?" s3":""}`:""}" ${stack?`data-stack="${esc(G.g)}" aria-label="${esc(r.n)}: ${vs.length} versions, choose one"`:`data-open="${r.id}"`}>
+    ${stack?thumbHTML(r).replace('<div class="thumb','<div class="thumb').replace(/<\/div>$/,`<span class="stackbadge">⧉ ${vs.length} versions</span></div>`):thumbHTML(r)}${vt}
     <div class="swatch"><span class="pro"><i class="dot" style="background:${pc}"></i>${pn} · ${CATS[r.cat]}</span><span class="time">${fmtMin(r.time)}</span></div>
     <h3>${esc(r.n)}</h3>${r.zh?`<div class="zh">${esc(r.zh)}</div>`:""}<div class="by"><span class="plat ${r.plat}">${PLAT_LABEL[r.plat]}</span> ${r.plat==="dy"?esc(r.by)+(r.vids.length>1?` +${r.vids.length-1} more`:""):r.plat==="own"?"our recipe":r.plat==="extra"?"new idea":r.plat==="ai"?"from the fridge":"@"+esc(r.by)} · ${r.fixed?esc(r.fixed):`serves ${r.serves}`}</div>
     <div class="meta">${tg.join("")}</div></button>`;
@@ -1263,7 +1279,7 @@ function renderBook(){
     if(shown.has(G.g))continue;
     const vis=G.v.map(x=>byId[x[0]]).filter(x=>!isHidden(x));const hit=vis.filter(matches);if(!hit.length)continue;
     shown.add(G.g);list.push(hit.find(x=>x.id===VPREF[G.g])||vis.find(x=>x.id===VPREF[G.g]&&!filter.q&&filter.tag==null)||hit[0])}
-  $("#grid").innerHTML=list.length?list.map(card).join(""):`<div class="empty-state" style="grid-column:1/-1">Nothing matches “${esc(filter.q)}”. Try an ingredient like <b>prawns</b> or <b>coconut</b>.</div>`;
+  $("#grid").innerHTML=list.length?list.map(r=>card(r,true)).join(""):`<div class="empty-state" style="grid-column:1/-1">Nothing matches “${esc(filter.q)}”. Try an ingredient like <b>prawns</b> or <b>coconut</b>.</div>`;
   $("#c-book").textContent=RECIPES.length-GROUPS.reduce((n,G)=>n+G.v.length-1,0);
   const hid=(S.hidden||[]).map(id=>byId[id]).filter(Boolean),del=(S.deleted||[]).map(id=>byId[id]).filter(Boolean);
   $("#also").innerHTML=(hid.length?`<div class="eyebrow">Archived recipes (${hid.length})</div><ul>${hid.map(r=>`<li>${esc(r.n)} <button class="ib" data-unhide="${r.id}">Bring back</button></li>`).join("")}</ul><div style="height:18px"></div>`:"")
@@ -1429,6 +1445,19 @@ function listText(){
 }
 
 /* ============ RECIPE SHEET ============ */
+function openStack(g){
+  const G=GROUPS.find(x=>x.g===g);if(!G)return;const vs=G.v.filter(([id])=>!isHidden(byId[id]));
+  const first=byId[vs[0][0]];
+  $("#sheet").innerHTML=`<div class="scrim" data-scrim><article class="sheet stacksheet" role="dialog" aria-modal="true" aria-label="Choose a version">
+   <button class="close" data-closesheet aria-label="Close">×</button>
+   <div class="eyebrow">${vs.length} versions</div><h2>${esc(first.zh||first.n)}</h2>
+   <p class="note">These are versions of the same dish, quickest first. Pick one to open it.</p>
+   <div class="stacklist">${vs.map(([id,l])=>{const r=byId[id];const src=pic(id);
+     return `<button class="stackrow2" data-stackchoose="${id}">${src?`<img src="${src}" alt="" loading="lazy">`:`<span class="sth" style="--pc:${PROTEIN[r.pro][1]}">${esc(r.zh?r.zh.slice(0,4):r.n.split(/\s+/).slice(0,2).join(" "))}</span>`}
+       <span class="stx"><b>${esc(r.n)}</b><span class="note">${esc(l)} · ${fmtMin(r.time)} · <span class="plat ${r.plat}">${PLAT_LABEL[r.plat]}</span> ${r.plat==="ai"?"saved by Claude":r.plat==="own"?(r.link?"imported":"our recipe"):r.plat==="extra"?"new idea":r.plat==="dy"?esc(r.by):"@"+esc(r.by)}${r.savedOn?` · ${esc(r.savedOn)}`:""}</span></span><span class="sgo" aria-hidden="true">›</span></button>`}).join("")}</div>
+   <p class="note" style="margin-top:14px">Don't want one of these stacked here? Open it and tap <b>Unstack</b> at the bottom.</p>
+  </article></div>`;
+}
 let sheetP=null;
 // SHEET_F: scale set by typing an amount for one ingredient ("I've got 500 g of beef"); null = scale by portions
 let SHEET_F=null,SHEET_EDIT=null,SCALED_IDX=null,SHEET_P0=null;
@@ -2149,6 +2178,8 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
   if(d.stackwith){const[a,b]=d.stackwith.split("|");stackTogether(a,b);openRecipe(a,sheetP);toast("Stacked. Pick the version on the card.");return}
   if(d.stackpick){const o=$("#stack-sel")?.value;if(!o){toast("Choose a recipe to stack with");return}stackTogether(d.stackpick,o);openRecipe(d.stackpick,sheetP);toast("Stacked");return}
   if(d.unstack){unstack(d.unstack);openRecipe(d.unstack,sheetP);toast("Unstacked. It's its own card again.");return}
+  if(d.stack){openStack(d.stack);return}
+  if(d.stackchoose){setVpref(d.stackchoose);renderBook();openRecipe(d.stackchoose);return}
   if(d.vopen){setVpref(d.vopen);openRecipe(d.vopen,sheetP);renderBook();return}
   if(d.variant){const[k,m]=d.variant.split(".");const x=S.week[k][m];if(!x||!x.r)return;const sib=siblings(x.r).filter(id=>id===x.r||!isHidden(byId[id]));const nx=sib[(sib.indexOf(x.r)+1)%sib.length];if(nx===x.r)return;pushUndo();x.r=nx;commit();toast(`Switched to ${byId[nx].n}`);return}
   if(d.open){openRecipe(d.open,d.p?+d.p:null);return}
