@@ -1231,6 +1231,7 @@ function rebuildGroups(){
     const v=rs.map((r,i)=>{if(STATIC_LABEL[r.id])return[r.id,STATIC_LABEL[r.id]];
       let d=String(r.n).replace(/\(no [^)]*\)/gi," ").replace(/[()]/g," ").split(/[\s,&]+/).filter(w=>{const t=w.toLowerCase().replace(/[^a-z0-9]/g,"");return t&&!N_STOP.has(t)&&!common.includes(N_SYN[t]||t.replace(/(?<=..)s$/,""))}).slice(0,2).join(" ");
       const sp=speedy?(i===0?"Quick":i===rs.length-1?"Slow":""):"";
+      if(r.plat==="ai"&&!STATIC_LABEL[r.id])d="Claude's"+(d?" · "+d:"");
       if(!d&&!sp)d=r.plat==="ai"?"Claude's":r.plat==="own"?"Ours":r.plat==="dy"?"Douyin":r.plat==="extra"?"New idea":"@"+r.by;
       if(sp&&d.toLowerCase().startsWith(sp.toLowerCase()))return[r.id,d];
       return[r.id,sp&&d?sp+" · "+d:sp||d]});
@@ -2070,7 +2071,9 @@ async function saveCustom(r){
   try{localStorage.setItem(LSC,JSON.stringify(list))}catch(e){}
   if(db){try{await db.doc("custom/"+rec.id).set(JSON.parse(JSON.stringify(rec)))}catch(e){toast("Saved on this device only")}}
   mergeCustom(list);const G=GROUP_OF[rec.id];
-  toast(G?`Saved and stacked with ${G.v.filter(x=>x[0]!==rec.id).map(x=>byId[x[0]].n).join(", ")}`:"Saved to the cookbook");
+  if(G){setVpref(rec.id);renderBook()}
+  openRecipe(rec.id);
+  toast(G?`Saved. It's a new version on the “${byId[G.v.find(x=>x[0]!==rec.id)[0]].n}” card. Switch versions there.`:"Saved to the cookbook");
 }
 async function removeCustom(id){
   const list=CUSTOM.filter(x=>x.id!==id);try{localStorage.setItem(LSC,JSON.stringify(list))}catch(e){}
