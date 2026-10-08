@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import RECIPES from "./recipes.json";
 import { handleMcp } from "./mcp.js";
 import { freshState } from "./shared.js";
+import { importPost } from "./importer.js";
 
 /* Kitchen codes look like K7QM-4XPA-9RTE: 12 characters from a 32-letter alphabet (60 bits),
    with no 0/O/1/I so they're easy to read out. The code is the only key to a kitchen. */
@@ -103,6 +104,14 @@ export default {
     }
 
     if (p[0] === "api") {
+      // read a recipe post's caption; open to any page (no credentials, returns only extracted text)
+      if (p[1] === "import") {
+        const open = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type" };
+        if (req.method !== "POST") return json({ error: "POST {text}" }, 405, open);
+        let text = ""; try { text = String((await req.json()).text || ""); } catch (e) {}
+        try { return json(await importPost(text), 200, open); }
+        catch (e) { return json({ ok: false, error: "Couldn't open that link (" + (e.message || "error") + "). Paste the caption instead." }, 200, open); }
+      }
       if (req.method === "POST" && p[1] === "kitchens" && p.length === 2) {
         let seed = null;
         try { const t = await req.text(); if (t.length > 3_000_000) return json({ error: "Too much data" }, 413, h); seed = t ? JSON.parse(t) : null; } catch (e) {}

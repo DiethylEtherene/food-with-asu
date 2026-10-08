@@ -2,6 +2,7 @@
    Each kitchen has its own URL, https://<worker>/mcp/<KITCHEN-CODE>, which people add as a
    custom connector in Claude. Tools read and write the same kitchen the web app syncs with. */
 import { freshState, emptyWeek } from "./shared.js";
+import { importPost } from "./importer.js";
 
 const VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -47,7 +48,8 @@ const TOOLS = [
         heading: { type: "string" } } } },
       steps: { type: "array", items: { type: "object", properties: {
         text: { type: "string" }, timer_minutes: { type: "number", description: "If the step has a wait, e.g. 10" }, timer_label: { type: "string", description: "Short, e.g. 'Simmer'" } }, required: ["text"] } },
-      tip: { type: "string" }, blurb: { type: "string", description: "One line about the dish" } },
+      tip: { type: "string" }, blurb: { type: "string", description: "One line about the dish" },
+      source_link: { type: "string", description: "Link to the original video/post if it came from one" }, creator: { type: "string", description: "Creator's handle if imported, e.g. @rafifronz" } },
       required: ["name", "category", "protein", "serves", "total_minutes", "ingredients", "steps"] } },
   { name: "delete_saved_recipe", title: "Delete a saved recipe", description: "Delete a recipe that was saved into this kitchen (ids starting ai- or me-). Built-in recipes can't be deleted this way.",
     inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] }, annotations: { destructiveHint: true } },
@@ -62,6 +64,8 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
   { name: "get_pantry", title: "Get pantry", description: "Long-lasting items (oils, sauces, spices, dry goods) marked as 'have' or 'low'.",
     inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
+  { name: "read_recipe_link", title: "Read a recipe link", description: "Fetch the caption / description from an Instagram, TikTok, YouTube or Douyin link (or a recipe website's structured recipe) so you can turn it into a recipe. Instagram comments and spoken audio can't be read. After reading, write the recipe faithfully from the creator's own amounts (estimate only what's missing and say so), credit the creator, and save it with save_recipe (put the link in source_link) if the user wants it kept.",
+    inputSchema: { type: "object", properties: { link: { type: "string", description: "The URL, or the whole share text (Douyin share text includes the caption)" } }, required: ["link"] }, annotations: { readOnlyHint: true, openWorldHint: true } },
   { name: "update_pantry", title: "Update pantry", description: "Mark pantry items as have, low (needs restocking, goes on the shopping list) or remove.",
     inputSchema: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: {
       name: { type: "string" }, status: { type: "string", enum: ["have", "low", "remove"] } }, required: ["name", "status"] } } }, required: ["items"] } },
@@ -127,6 +131,7 @@ function cleanRecipe(a, id) {
     serves: num(a.serves, 2, 1, 12), time, active: num(a.hands_on_minutes, Math.min(time, 25), 1, 300),
     tags: (Array.isArray(a.tags) ? a.tags : []).filter(t => TAGS.includes(t)).slice(0, 6), prep: (a.tags || []).includes("meal prep"),
     note: str(a.tip, 400), ing, steps, src: "ai", plat: "ai", by: "Claude", via: "chat",
+    link: /^https?:\/\//.test(String(a.source_link || "")) ? str(a.source_link, 300) : undefined, creator: str(a.creator, 40).replace(/^@?/, a.creator ? "@" : "") || undefined,
     savedOn: new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" }).format(new Date()) };
 }
 
@@ -237,6 +242,7 @@ const run = {
     const e = Object.entries(st.pantry || {});
     return { have: e.filter(([, v]) => v === 1).map(([n]) => n), low: e.filter(([, v]) => v === 2).map(([n]) => n) };
   },
+  async read_recipe_link(a) { return await importPost(a.link); },
   async update_pantry(a, ctx) {
     const st = (await ctx.k.getState()) || freshState();
     st.pantry = st.pantry || {}; st.pantryExtra = st.pantryExtra || [];

@@ -239,6 +239,13 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .vtog .v[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .vtog .v .mono{font-weight:500;opacity:.8;margin-left:4px}
 .mkrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-2px 0 14px}
+.impform{display:flex;gap:8px;margin:12px 0;align-items:flex-start}
+.impform textarea{flex:1;min-width:0;resize:vertical;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:9px 12px;font:inherit;font-size:15px}
+.imp textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;resize:vertical}
+.imp label.f{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
+.imp .hint{font-size:12px;color:var(--ink-3);margin-top:4px}
+.imp .err{color:var(--chilli);font-size:13.5px}
+.impres{margin-top:6px}
 .mk label.f{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
 .mk input[type=text],.mk input[type=number],.mk select,.mk textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:9px 12px;font:inherit;font-size:14.5px}
 .mk textarea{resize:vertical;line-height:1.5}
@@ -437,7 +444,7 @@ details.staples summary{cursor:pointer;font-weight:600}
         <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="Search recipes, ingredients, creators…" autocomplete="off"></label>
       </div>
       <div class="chips" id="chips"></div>
-      <div class="mkrow"><button class="btn" id="mkopen">+ Write your own recipe</button><span class="note">Invented something? Add it to the cookbook.</span></div>
+      <div class="mkrow"><button class="btn" id="mkopen">+ Write your own recipe</button><button class="btn" id="impopen">🔗 Import from a link</button><span class="note">Invented something, or saw it online? Add it to the cookbook.</span></div>
       <div id="askrecipe"></div>
       <div class="grid" id="grid"></div>
       <div class="also" id="also"></div>
@@ -1448,7 +1455,7 @@ function renderSheet(r){
    <h2>${esc(r.n)}</h2>
    ${r.zh?`<div class="zh" style="font-size:16px;margin-bottom:4px">${esc(r.zh)}</div>`:""}
    ${GROUP_OF[r.id]?`<div class="variants"><span class="note">Versions</span><span class="vtog">${GROUP_OF[r.id].v.filter(([id])=>id===r.id||!isHidden(byId[id])).map(([id,l])=>`<button class="v" data-vopen="${id}" aria-pressed="${id===r.id}">${esc(l)}<span class="mono">${fmtMin(byId[id].time)}</span></button>`).join("")}</span></div>`:""}
-   <div class="src">${r.plat==="own"?`Our own recipe${r.mine&&r.by&&r.by!=="us"?` · by ${esc(r.by)}`:""}${r.mine&&r.savedOn?` · added ${esc(r.savedOn)}`:""}${r.mine?` · <button class="ib" data-mkedit="${r.id}">Edit</button>`:""}`:r.plat==="extra"?`A new idea from Claude that isn't from your saves. Every ingredient is a Sainsbury's / Waitrose regular.`:r.plat==="ai"?`Suggested by Claude from what was in the fridge${r.savedOn?` · saved ${esc(r.savedOn)}`:""}`:r.plat==="dy"?`Douyin: ${r.vids.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a>`).join(" · ")}${r.vids.length>1?` <span class="note">(${r.vids.length} saves merged)</span>`:""}`:`From <a href="${reelUrl(r)}" target="_blank" rel="noopener">@${esc(r.by)}${r.code?" (watch the reel)":""}</a>`}${r.src.includes("adapted")?" · adapted":""}${r.at?` · <span class="mono">starts at ${esc(r.at)}</span> in the vlog`:""}${r.also?`<br>Also on Douyin: ${r.also.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a> (${esc(v[2])})`).join(" · ")}`:""}</div>
+   <div class="src">${r.plat==="own"?`${r.link?"Imported recipe":"Our own recipe"}${r.mine&&r.by&&r.by!=="us"?` · by ${esc(r.by)}`:""}${r.mine&&r.savedOn?` · added ${esc(r.savedOn)}`:""}${r.mine?` · <button class="ib" data-mkedit="${r.id}">Edit</button>`:""}`:r.plat==="extra"?`A new idea from Claude that isn't from your saves. Every ingredient is a Sainsbury's / Waitrose regular.`:r.plat==="ai"?`Suggested by Claude from what was in the fridge${r.savedOn?` · saved ${esc(r.savedOn)}`:""}`:r.plat==="dy"?`Douyin: ${r.vids.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a>`).join(" · ")}${r.vids.length>1?` <span class="note">(${r.vids.length} saves merged)</span>`:""}`:`From <a href="${reelUrl(r)}" target="_blank" rel="noopener">@${esc(r.by)}${r.code?" (watch the reel)":""}</a>`}${r.src.includes("adapted")?" · adapted":""}${r.link&&(r.plat==="own"||r.plat==="ai")?` · <a href="${esc(r.link)}" target="_blank" rel="noopener">watch the original${r.creator?" by "+esc(r.creator):""}</a>`:""}${r.at?` · <span class="mono">starts at ${esc(r.at)}</span> in the vlog`:""}${r.also?`<br>Also on Douyin: ${r.also.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a> (${esc(v[2])})`).join(" · ")}`:""}</div>
    <div class="facts"><div><b>${fmtMin(r.time)}</b><span>Total</span></div><div><b>${fmtMin(r.active)}</b><span>Hands-on</span></div>
     <div>${r.fixed?`<b>${esc(r.fixed)}</b><span>Makes</span>`:`<span class="stepper" style="margin-bottom:2px"><button data-sp="-1" aria-label="Fewer portions">−</button><span>${SHEET_F?"≈ "+pe:p} ${pe>1?"portions":"portion"}</span><button data-sp="1" aria-label="More portions">+</button></span><span>Original serves ${r.serves}</span>`}</div></div>
    <div class="btnrow"><button class="btn primary" data-cook="${r.id}" data-p="${SHEET_F?Math.round(SHEET_F*r.serves*100)/100:p}">Start cooking</button></div>
@@ -1898,6 +1905,71 @@ async function removeCustom(id){
   $("#sheet").innerHTML="";mergeCustom(list);toast("Removed");
 }
 
+
+/* ============ IMPORT FROM A LINK ============
+   The Worker reads the post's caption (Instagram, TikTok, YouTube, Douyin share text) or a recipe site's
+   structured recipe. Audio and Instagram comments can't be read, so people can paste those in. */
+const IMPORT_API="https://food-with-asu.food-with-asu-worker.workers.dev/api/import";
+const IMP_PLAT={instagram:"Instagram",tiktok:"TikTok",youtube:"YouTube",douyin:"Douyin",web:"Website"};
+let IMP={text:"",busy:false,res:null,cap:"",err:""};
+const SPONSOR_RE=/#ad\b|#sponsored|#gifted|#partner|paid partnership|\buse (my )?code\b|discount code|% off|link in (my )?bio|\baffiliate\b|\bsponsored by\b/i;
+function cleanCaption(t){return String(t||"").split("\n").filter(l=>!SPONSOR_RE.test(l)&&!/^\s*(#\S+\s*)+$/.test(l)).join("\n").replace(/\n{3,}/g,"\n\n").trim()}
+// "2 tbsp @kewpie mayo" -> "2 tbsp mayo (swapped from @kewpie)": a tagged brand is usually a sponsor
+function debrand(l){const m=l.match(/@[\w.]+/g);if(!m)return l;const t=l.replace(/\s*(?:from |by |using )?@[\w.]+(?:'s)?/g,"").replace(/\s{2,}/g," ").trim();return t?`${t} (swapped from ${m.join(", ")})`:l}
+function splitCaption(cap){
+  const lines=cleanCaption(cap).split("\n").map(l=>l.replace(/^[^\p{L}\p{N}#½¼¾⅓⅔]+/u,"").trim()).filter(Boolean);
+  let mode=null;const ing=[],steps=[];
+  for(const l of lines){
+    if(/^(ingredients?|you('ll)? need|what you need)\b/i.test(l)&&l.length<40){mode="i";const rest=l.split(/[:：]/).slice(1).join(":").trim();if(rest)ing.push(rest);continue}
+    if(/^(method|instructions?|steps?|directions?|how to( make)?)\b/i.test(l)&&l.length<40){mode="s";continue}
+    if(mode!=="s"&&/^(for (the )?[\w ]{2,20}|sauce|marinade|dressing|topping|garnish)\s*[:：]$/i.test(l)){mode="i";ing.push("# "+l.replace(/[:：]$/,""));continue}
+    const ingLike=/^(\d|[½¼¾⅓⅔]|a (pinch|handful|splash|dash|knob)|pinch|handful|salt|pepper)/i.test(l)&&l.length<90&&!/^\d+[.)]\s/.test(l);
+    const stepLike=/^\d+[.)]\s/.test(l)||/^step \d/i.test(l)||l.length>70;
+    if(mode==="i"&&!stepLike)ing.push(l);else if(mode==="s"||stepLike)steps.push(l);else if(ingLike)ing.push(l)}
+  return{ing:ing.map(debrand),steps};
+}
+const impHasRecipe=()=>!!(IMP.res&&(IMP.res.recipe||splitCaption(IMP.cap).ing.length>=3));
+function impName(){const r=IMP.res||{};if(r.recipe&&r.recipe.name)return r.recipe.name;if(r.title)return r.title.replace(/\s*[|\-–].*$/,"");
+  const first=cleanCaption(IMP.cap).split("\n").map(l=>l.replace(/^[^\p{L}\p{N}]+/u,"").replace(/#\S+/g,"").trim())
+    .find(l=>l.length>2&&!/\b(ep|episode|part|day|pt)\.?\s*\d+|^(ingredients?|recipe)\b/i.test(l))||"";
+  const t=first.slice(0,60);return t===t.toUpperCase()&&/[A-Z]/.test(t)?t.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):t}
+function impToMk(){const r=IMP.res||{},d=mkBlank();d.link=r.url||"";d.by=r.author?((r.platform==="instagram"||r.platform==="tiktok")&&!r.author.startsWith("@")?"@"+r.author:r.author):"";d.n=impName();d.notes=IMP.cap;
+  if(r.recipe&&r.recipe.ingredients.length){d.ingText=r.recipe.ingredients.map(debrand).join("\n");d.stepText=r.recipe.steps.join("\n");if(r.recipe.total_minutes)d.time=r.recipe.total_minutes;const y=String(r.recipe.yield||"").match(/\d+/);if(y)d.serves=Math.min(12,+y[0])}
+  else{const x=splitCaption(IMP.cap);d.ingText=x.ing.join("\n");d.stepText=x.steps.join("\n")}
+  return d}
+function renderImport(){const r=IMP.res,has=impHasRecipe();
+  $("#sheet").innerHTML=`<div class="scrim" data-scrim><article class="sheet imp" role="dialog" aria-modal="true" aria-label="Import a recipe from a link">
+   <button class="close" data-closesheet aria-label="Close">×</button>
+   <div class="eyebrow">Import</div><h2>Get a recipe from a link</h2>
+   <p class="note">Paste an Instagram, TikTok, YouTube or recipe-website link, or Douyin's whole share text. The app reads the caption or description. It can't hear the video or read Instagram comments, so if the recipe is only there, paste it in below.</p>
+   <form id="impform" class="impform" autocomplete="off"><textarea id="imp-text" rows="2" placeholder="https://www.instagram.com/reel/… (or paste the recipe text itself)">${esc(IMP.text)}</textarea><button class="btn primary" type="submit" ${IMP.busy?"disabled":""}>${IMP.busy?"Reading…":"Get recipe"}</button></form>
+   ${IMP.err?`<p class="err" role="alert">${esc(IMP.err)}</p>`:""}
+   ${r?`<div class="impres">
+     <div class="note">${esc(IMP_PLAT[r.platform]||"Link")}${r.author?` · ${esc(r.author)}`:""}${r.url?` · <a href="${esc(r.url)}" target="_blank" rel="noopener">open the original</a>`:""}</div>
+     ${r.note?`<p class="note">${esc(r.note)}</p>`:""}
+     <label class="f" for="imp-cap">What the post says${r.recipe?" (a full recipe was found on the page)":""}</label>
+     <textarea id="imp-cap" rows="10" placeholder="Paste the caption, or the recipe from the comments or video">${esc(IMP.cap)}</textarea>
+     <div class="hint">Add anything from the comments or the video before you carry on. Sponsored or branded ingredients get swapped for a normal supermarket version.</div>
+     ${has||!IMP.cap.trim()?"":`<p class="callout">This doesn't look like it includes the recipe itself${/link in (my )?bio|provecho|on my (blog|website)|recipe (is )?in/i.test(IMP.cap)?" (it points somewhere else, like a link in bio)":""}. Paste it in from the comments or video, ${SAMPLE?"or let Claude work it out from the dish.":"or ask Claude to write it with the connector."}</p>`}
+     <div class="btnrow" style="margin-top:12px">
+       ${SAMPLE?`<button class="btn primary" id="impai">✦ Turn into a recipe with Claude</button>`:""}
+       <button class="btn${SAMPLE?"":" primary"}" id="impfill">Fill in the recipe form</button>
+       ${SAMPLE&&!has?`<button class="btn" id="impask">Ask Claude to work it out</button>`:""}
+       ${SAMPLE?"":`<button class="btn" id="impcopy">Copy a request for Claude</button>`}
+     </div></div>`:""}
+  </article></div>`}
+async function impFetch(text){const t=String(text||"").trim();IMP.text=t;IMP.err="";if(!t){IMP.err="Paste a link first.";renderImport();return}
+  const link=(t.match(/https?:\/\/[^\s"'<>，。]+/)||[])[0];
+  if(!link){IMP.res={platform:"",url:"",author:"",caption:""};IMP.cap=t;renderImport();return}   // pasted the recipe text itself
+  IMP.busy=true;renderImport();
+  try{const r=await fetch(IMPORT_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})});const x=await r.json();
+    if(!x.ok){IMP.err=x.error||"Couldn't read that link.";IMP.res={platform:"",url:link,author:"",caption:""};IMP.cap=""}
+    else{IMP.res=x;IMP.cap=x.recipe?`Ingredients:\n${x.recipe.ingredients.map(i=>"- "+i).join("\n")}\n\nMethod:\n${x.recipe.steps.map((s,i)=>`${i+1}. ${s}`).join("\n")}`:(x.caption||"")}}
+  catch(e){IMP.err="This page couldn't open the link. Paste the caption or recipe below instead.";IMP.res={platform:"",url:link,author:"",caption:""};IMP.cap=""}
+  IMP.busy=false;renderImport();const c=$("#imp-cap");if(c&&!IMP.cap)c.focus()}
+document.addEventListener("submit",e=>{if(e.target.id==="impform"){e.preventDefault();impFetch($("#imp-text").value)}});
+document.addEventListener("input",e=>{if(e.target.id==="imp-cap")IMP.cap=e.target.value;if(e.target.id==="imp-text")IMP.text=e.target.value});
+
 /* ============ WRITE YOUR OWN RECIPE ============ */
 let MK=null; // draft being edited: {id?, n, zh, by, cat, pro, serves, time, active, tags[], note, ingText, stepText, photo, notes}
 const MK_UNITS={g:"g",gram:"g",grams:"g",kg:"kg",ml:"ml",l:"l",litre:"l",liter:"l",tsp:"tsp",teaspoon:"tsp",teaspoons:"tsp",tbsp:"tbsp",tablespoon:"tbsp",tablespoons:"tbsp",clove:"clove",cloves:"clove",bunch:"bunch",sprig:"sprig",sprigs:"sprig",cm:"cm"};
@@ -1945,14 +2017,15 @@ function parseStep(line){const t=line.trim().replace(/^(\d+[.)]|step\s*\d+[:.)]?
   verb=verb||(t.match(/^[A-Za-z]+/)||["Timer"])[0];verb=verb.charAt(0).toUpperCase()+verb.slice(1);
   return[t.slice(0,400),Math.min(300,Math.round(mins)),verb.slice(0,24)]}
 function mkFrom(r){return{id:r.id,n:r.n,zh:r.zh||"",by:r.by&&r.by!=="us"?r.by:"",cat:r.cat,pro:r.pro,serves:r.serves,time:r.time,active:r.active,tags:[...(r.tags||[])],note:r.note||"",
-  ingText:r.ing.map(ingLine).join("\n"),stepText:r.steps.map(s=>s[0]).join("\n"),photo:r.photo||"",notes:""}}
-function mkBlank(){return{n:"",zh:"",by:"",cat:"main",pro:"chicken",serves:2,time:30,active:20,tags:[],note:"",ingText:"",stepText:"",photo:"",notes:""}}
+  ingText:r.ing.map(ingLine).join("\n"),stepText:r.steps.map(s=>s[0]).join("\n"),photo:r.photo||"",notes:"",link:r.link||""}}
+function mkBlank(){return{n:"",zh:"",by:"",cat:"main",pro:"chicken",serves:2,time:30,active:20,tags:[],note:"",ingText:"",stepText:"",photo:"",notes:"",link:""}}
 function openMaker(r){if(r)MK=mkFrom(r);else if(!MK||MK.id)MK=mkBlank();renderMaker()}
 let MK_ERR="",MK_BUSY=false,mkCtl=null;
 function renderMaker(){const d=MK;
   $("#sheet").innerHTML=`<div class="scrim" data-mkscrim><article class="sheet mk" role="dialog" aria-modal="true" aria-label="Write your own recipe">
    <button class="close" data-mkclose aria-label="Close">×</button>
-   <div class="eyebrow">${d.id?"Edit recipe":"Our own recipe"}</div><h2>${d.id?"Edit "+esc(d.n||"recipe"):"Write your own recipe"}</h2>
+   <div class="eyebrow">${d.id?"Edit recipe":d.link?"Imported recipe":"Our own recipe"}</div><h2>${d.id?"Edit "+esc(d.n||"recipe"):d.link?"Check the recipe":"Write your own recipe"}</h2>
+   ${d.link?`<p class="note">From <a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.by||"the original post")}</a>. Check the amounts, then add it.</p>`:""}
    <p class="note">Type it however you like: one ingredient per line (e.g. <span class="mono">200g chicken thighs, diced</span>) and one step per line. Times in the steps (e.g. “simmer 10 min”) become tap-to-start timers.</p>
    ${SAMPLE?`<details class="assist"${d.notes?" open":""}><summary>✦ Got rough notes? Let Claude fill the form in</summary>
      <textarea id="mk-notes" rows="5" maxlength="4000" placeholder="e.g. fried half an onion and some garlic, added a tin of tomatoes and a spoon of gochujang, simmered 15 min, stirred in cream and tossed with rigatoni…">${esc(d.notes)}</textarea>
@@ -1986,20 +2059,21 @@ async function mkSave(){mkRead();const d=MK;MK_ERR="";
   const r={id:d.id||"me-"+Date.now().toString(36),mine:true,n:d.n.trim().slice(0,80),zh:d.zh.trim().slice(0,30),by:d.by.trim().slice(0,30)||"us",
     cat:CATS[d.cat]?d.cat:"main",pro:PROTEIN[d.pro]?d.pro:"veg",serves:Math.min(12,Math.max(1,Math.round(d.serves))),time:Math.min(600,Math.max(1,Math.round(d.time))),
     active:Math.min(Math.max(1,Math.round(d.time)),old?.active||Math.max(5,Math.round(d.time)-Math.round(timed/2))),tags:d.tags.slice(0,8),prep:d.tags.includes("meal prep"),
-    note:d.note.trim().slice(0,400),ing:ing.slice(0,40),steps:steps.slice(0,20),photo:d.photo||"",createdOn:old?.createdOn||new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
+    note:d.note.trim().slice(0,400),ing:ing.slice(0,40),steps:steps.slice(0,20),photo:d.photo||"",link:/^https?:\/\//.test(d.link||"")?d.link:(old?.link||undefined),createdOn:old?.createdOn||new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
   AISLE_OF=null;MK=null;$("#sheet").innerHTML="";await saveCustom(r);openRecipe(r.id)}
 async function mkPhoto(file){if(!file)return;try{const bm=await createImageBitmap(file);const W=640,H=480,c=document.createElement("canvas");c.width=W;c.height=H;
   const k=Math.max(W/bm.width,H/bm.height),w=bm.width*k,h=bm.height*k;c.getContext("2d").drawImage(bm,(W-w)/2,(H-h)/2,w,h);
   let q=.78,url=c.toDataURL("image/jpeg",q);while(url.length>120000&&q>.4){q-=.12;url=c.toDataURL("image/jpeg",q)}mkRead();MK.photo=url;renderMaker()}catch(e){toast("Couldn't read that photo")}}
-async function mkFill(){mkRead();const notes=(MK.notes||"").trim();if(!notes||!SAMPLE){toast("Type your notes first");return}
+async function mkFill(imported){mkRead();const notes=(MK.notes||"").trim();if(!notes||!SAMPLE){toast("Type your notes first");return}
   MK_BUSY=true;renderMaker();mkCtl=new AbortController();
   const prompt=`Turn these home-cook notes into a structured recipe. Stay faithful: keep their ingredients, amounts, order and method exactly as written. Do not add ingredients or steps they didn't mention, except obvious basics (salt, oil, water) when a step clearly needs them. Where an amount is missing, estimate a sensible UK-supermarket amount and add "(estimate)" after the ingredient. Use metric (g, ml) or tsp/tbsp. One ingredient per line like "200 g chicken thighs, diced" or "1 tbsp soy sauce". One step per line, including any times mentioned (e.g. "simmer 10 min").
 Notes:
-"""${notes.slice(0,4000)}"""
+"""${notes.slice(0,4000)}"""${MK.link?`
+These notes are the caption/description of a creator's recipe post. Ignore anything that isn't the recipe (sponsorship lines, discount codes, "link in bio", hashtags, chat). If an ingredient is a sponsored or branded product (e.g. "@brand chilli oil", "Brand X seasoning", a named brand of sauce), replace it with the plain generic version sold at Sainsbury's/Waitrose and put "swapped from <brand>" in that ingredient's note. Give the dish a short, clear English name.`:""}
 ${MK.n?`They call it: ${MK.n}\n`:""}Return JSON only: {"n":"short dish name","zh":"Chinese name if the notes use Chinese, else empty","cat":"main|side|snack|dessert","pro":"chicken|beef|pork|fish|veg|sweet","serves":2,"time":30,"tags":["up to 4 of: ${TAGS.join(", ")}"],"note":"one-line tip from their notes, or empty","ing":["..."],"steps":["..."]}`;
   try{const x=await SAMPLE.json(prompt,{signal:mkCtl.signal,cache:false});if(!x||typeof x!=="object")throw{message:"no recipe"};
     if(!MK)return;
-    if(x.n&&!MK.n)MK.n=String(x.n).slice(0,80);if(x.zh&&!MK.zh)MK.zh=String(x.zh).slice(0,30);
+    if(x.n&&(imported||!MK.n))MK.n=String(x.n).slice(0,80);if(x.zh&&!MK.zh)MK.zh=String(x.zh).slice(0,30);
     if(CATS[x.cat])MK.cat=x.cat;if(PROTEIN[x.pro])MK.pro=x.pro;if(+x.serves)MK.serves=Math.min(12,Math.max(1,Math.round(+x.serves)));if(+x.time)MK.time=Math.min(600,Math.max(1,Math.round(+x.time)));
     if(Array.isArray(x.tags))MK.tags=[...new Set([...MK.tags,...x.tags.map(String).filter(t=>TAGS.includes(t))])].slice(0,6);
     if(x.note&&!MK.note)MK.note=String(x.note).slice(0,400);
@@ -2014,6 +2088,15 @@ document.addEventListener("change",e=>{if(e.target.id==="mk-photo")mkPhoto(e.tar
 document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest(".mk"))mkRead()});
 document.addEventListener("click",e=>{
   if(e.target.closest("#mkopen")){openMaker(null);return}
+  if(e.target.closest("#impopen")){if(!IMP.busy){IMP.err=""}renderImport();setTimeout(()=>$("#imp-text")?.focus(),30);return}
+  if(e.target.closest("#impfill")){MK=impToMk();MK_ERR="";renderMaker();return}
+  if(e.target.closest("#impai")){if(!IMP.cap.trim()){IMP.err="Paste the caption or recipe first.";renderImport();return}MK=impToMk();MK_ERR="";renderMaker();mkFill(true);return}
+  if(e.target.closest("#impask")){const r=IMP.res||{};ASK_Q=impName()||"this dish";ASK_DETAILS=`${cleanCaption(IMP.cap).slice(0,1200)}${r.author?`
+From ${r.author}`:""}${r.url?` (${r.url})`:""}`;$("#sheet").innerHTML="";
+    document.querySelector('[data-tab="book"]')?.click();renderAskBox();$("#askrecipe")?.scrollIntoView({block:"start",behavior:"smooth"});findDish(ASK_Q);return}
+  if(e.target.closest("#impcopy")){const r=IMP.res||{};const txt=`Use my Food with Asu connector to read this recipe${r.url?" link and turn it into a recipe":""}, keeping the creator's amounts and swapping any sponsored or branded ingredients for normal Sainsbury's/Waitrose ones, then save it to my cookbook:
+${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("Copied. Paste it into Claude."),()=>fallbackCopy(txt));return}
   if(e.target.matches("[data-mkscrim]")||e.target.closest("[data-mkclose]")){mkRead();if(MK&&MK.id)MK=null;mkCtl?.abort();$("#sheet").innerHTML="";return}
   {const mt=e.target.closest("[data-mktag]");if(mt&&MK){mkRead();const t=mt.dataset.mktag;MK.tags=MK.tags.includes(t)?MK.tags.filter(x=>x!==t):[...MK.tags,t];mt.setAttribute("aria-pressed",MK.tags.includes(t));return}}
   if(e.target.closest("#mkfill")){mkFill();return}
