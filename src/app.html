@@ -336,6 +336,15 @@ details.staples summary{cursor:pointer;font-weight:600}
 .ing{list-style:none;padding:0;margin:0}
 .ing li{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
 .ing .q{font-family:var(--f-mono);font-size:13.5px;color:var(--accent);text-align:right}
+.qbtn{border:0;background:transparent;font:inherit;color:inherit;padding:1px 4px;border-radius:6px;border-bottom:1px dashed color-mix(in srgb,var(--accent) 45%,transparent);cursor:pointer}
+.qbtn:hover{background:var(--accent-soft)}
+.qbtn.on{background:var(--accent);color:var(--accent-ink);border-bottom-color:transparent}
+.ing li.scaling{grid-template-columns:1fr;background:var(--accent-soft);border-radius:10px;padding:8px 10px}
+.qedit{display:flex;align-items:center;gap:6px}
+.qedit input{width:96px;border:1px solid var(--accent);border-radius:8px;padding:6px 8px;font:inherit;font-family:var(--f-mono);font-size:16px;background:var(--surface);color:var(--ink)}
+.qedit .u{font-family:var(--f-mono);color:var(--accent)}
+.scalenote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--accent-soft);color:var(--ink);border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:14px}
+.scalehint{margin:-4px 0 8px}
 .ing .grp{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600;padding-top:10px;border:0}
 .steps{padding-left:0;list-style:none;counter-reset:s;margin:0}
 .steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:8px;padding:8px 0}
@@ -1413,13 +1422,23 @@ function listText(){
 
 /* ============ RECIPE SHEET ============ */
 let sheetP=null;
+// SHEET_F: scale set by typing an amount for one ingredient ("I've got 500 g of beef"); null = scale by portions
+let SHEET_F=null,SHEET_EDIT=null,SCALED_IDX=null,SHEET_P0=null;
 function openRecipe(id,p){
-  const r=byId[id];if(!r)return;sheetP=p||S.people;renderSheet(r);
+  const r=byId[id];if(!r)return;sheetP=p||S.people;SHEET_F=null;SHEET_EDIT=null;SCALED_IDX=null;renderSheet(r);
 }
+const sheetRecipe=()=>byId[document.querySelector("[data-addplan]")?.dataset.addplan];
+const keepScroll=fn=>{const y=document.querySelector("#sheet .sheet")?.scrollTop||0;fn();const el=document.querySelector("#sheet .sheet");if(el)el.scrollTop=y};
+// an amount typed for one ingredient, in that ingredient's own unit
+function applyIngScale(r,idx,val){const base=r.ing[idx]&&r.ing[idx][0];const v=parseFloat(String(val).replace(",","."));
+  if(typeof base==="number"&&base>0&&v>0){if(!SHEET_F)SHEET_P0=sheetP;SHEET_F=v/base;SCALED_IDX=idx;sheetP=Math.max(1,Math.round(SHEET_F*r.serves))}
+  SHEET_EDIT=null;keepScroll(()=>renderSheet(r))}
 function renderSheet(r){
-  const p=sheetP,f=scaleOf(r,p);
-  const ings=r.ing.map(i=>{if(i[0]==="—")return `<li class="grp">${esc(i[2])}</li>`;const[q,u,name,,note]=i;const qq=typeof q==="number"?fmtQty(q*f,u):(q==null?"to taste":"");
-    return `<li><span class="q">${qq}</span><span>${esc(name)}${note?` <span class="note">(${esc(note)})</span>`:""}${inPantry(name)?` <span class="pin">✓ pantry</span>`:""}</span></li>`}).join("");
+  const p=sheetP,f=SHEET_F||scaleOf(r,p),pe=SHEET_F?Math.round(SHEET_F*r.serves*10)/10:p;
+  const ings=r.ing.map((i,idx)=>{if(i[0]==="—")return `<li class="grp">${esc(i[2])}</li>`;const[q,u,name,,note]=i;const qq=typeof q==="number"?fmtQty(q*f,u):(q==null?"to taste":"");
+    if(typeof q==="number"&&SHEET_EDIT===idx){const cur=q*f;const v=u==="g"||u==="ml"?Math.round(cur):Math.round(cur*100)/100;
+      return `<li class="scaling"><form class="qedit" id="scaleform" data-idx="${idx}"><input id="scalein" type="number" inputmode="decimal" min="0" step="any" value="${v}" aria-label="Amount of ${esc(name)}"><span class="u">${esc(u||"×")}</span><button class="ib" type="submit">OK</button></form><span>${esc(name)} <span class="note">— type how much you've got; everything else follows</span></span></li>`}
+    return `<li><span class="q">${typeof q==="number"&&q>0?`<button class="qbtn${SHEET_F&&SCALED_IDX===idx?" on":""}" data-scaleing="${idx}" title="Tap to scale the recipe to this amount">${qq}</button>`:qq}</span><span>${esc(name)}${note?` <span class="note">(${esc(note)})</span>`:""}${inPantry(name)?` <span class="pin">✓ pantry</span>`:""}</span></li>`}).join("");
   const steps=r.steps.map((s,i)=>`<li><div>${timeLinks(s[0],`${r.n.slice(0,22)} · step ${i+1}`)}${s[1]?`<div><button class="tchip" data-tstart="${s[1]*60}" data-tlabel="${esc(s[2])} · ${esc(r.n.slice(0,22))}" title="Start this timer">⏱ ${fmtMin(s[1])} · ${esc(s[2])} · start</button></div>`:""}</div></li>`).join("");
   const dayOpts=DAYS.map(d=>`<option value="${d[0]}">${d[2]}</option>`).join("");
   $("#sheet").innerHTML=`<div class="scrim" data-scrim><article class="sheet" role="dialog" aria-modal="true" aria-label="${esc(r.n)}">
@@ -1431,13 +1450,13 @@ function renderSheet(r){
    ${GROUP_OF[r.id]?`<div class="variants"><span class="note">Versions</span><span class="vtog">${GROUP_OF[r.id].v.filter(([id])=>id===r.id||!isHidden(byId[id])).map(([id,l])=>`<button class="v" data-vopen="${id}" aria-pressed="${id===r.id}">${esc(l)}<span class="mono">${fmtMin(byId[id].time)}</span></button>`).join("")}</span></div>`:""}
    <div class="src">${r.plat==="own"?`Our own recipe${r.mine&&r.by&&r.by!=="us"?` · by ${esc(r.by)}`:""}${r.mine&&r.savedOn?` · added ${esc(r.savedOn)}`:""}${r.mine?` · <button class="ib" data-mkedit="${r.id}">Edit</button>`:""}`:r.plat==="extra"?`A new idea from Claude that isn't from your saves. Every ingredient is a Sainsbury's / Waitrose regular.`:r.plat==="ai"?`Suggested by Claude from what was in the fridge${r.savedOn?` · saved ${esc(r.savedOn)}`:""}`:r.plat==="dy"?`Douyin: ${r.vids.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a>`).join(" · ")}${r.vids.length>1?` <span class="note">(${r.vids.length} saves merged)</span>`:""}`:`From <a href="${reelUrl(r)}" target="_blank" rel="noopener">@${esc(r.by)}${r.code?" (watch the reel)":""}</a>`}${r.src.includes("adapted")?" · adapted":""}${r.at?` · <span class="mono">starts at ${esc(r.at)}</span> in the vlog`:""}${r.also?`<br>Also on Douyin: ${r.also.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a> (${esc(v[2])})`).join(" · ")}`:""}</div>
    <div class="facts"><div><b>${fmtMin(r.time)}</b><span>Total</span></div><div><b>${fmtMin(r.active)}</b><span>Hands-on</span></div>
-    <div>${r.fixed?`<b>${esc(r.fixed)}</b><span>Makes</span>`:`<span class="stepper" style="margin-bottom:2px"><button data-sp="-1" aria-label="Fewer portions">−</button><span>${p} ${p>1?"portions":"portion"}</span><button data-sp="1" aria-label="More portions">+</button></span><span>Original serves ${r.serves}</span>`}</div></div>
-   <div class="btnrow"><button class="btn primary" data-cook="${r.id}" data-p="${p}">Start cooking</button></div>
+    <div>${r.fixed?`<b>${esc(r.fixed)}</b><span>Makes</span>`:`<span class="stepper" style="margin-bottom:2px"><button data-sp="-1" aria-label="Fewer portions">−</button><span>${SHEET_F?"≈ "+pe:p} ${pe>1?"portions":"portion"}</span><button data-sp="1" aria-label="More portions">+</button></span><span>Original serves ${r.serves}</span>`}</div></div>
+   <div class="btnrow"><button class="btn primary" data-cook="${r.id}" data-p="${SHEET_F?Math.round(SHEET_F*r.serves*100)/100:p}">Start cooking</button></div>
    <div class="addplan"><span class="note">Add to</span><select id="ap-day" aria-label="Day">${dayOpts}</select><select id="ap-meal" aria-label="Meal"><option value="d">Dinner</option><option value="l">Lunch</option><option value="prep">Meal prep batch</option></select><button class="btn small" data-addplan="${r.id}">Add</button></div>
    ${r.note?`<div class="callout">${esc(r.note)}</div>`:""}
    ${r.mp?`<div class="callout green"><b>Meal prep:</b> ${esc(r.mp)}</div>`:""}
    ${r.af?`<div class="callout af"><b>Air fryer:</b> ${timeLinks(r.af,"Air fryer · "+r.n.slice(0,20))}</div>`:""}
-   <h4>Ingredients</h4><ul class="ing">${ings}</ul>
+   <h4>Ingredients</h4>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul>
    <h4>Method</h4><ol class="steps">${steps}</ol>
    ${(()=>{if(!byId[r.id]||!RECIPES.includes(r))return"";
      if(GROUP_OF[r.id])return `<div class="stackrow"><span class="note">Stacked with ${GROUP_OF[r.id].v.filter(x=>x[0]!==r.id).map(x=>esc(byId[x[0]].n)).join(", ")}.</span> <button class="ib" data-unstack="${r.id}">Unstack</button></div>`;
@@ -1513,7 +1532,7 @@ function renderCook(){
   const {r,p,i}=C,f=scaleOf(r,p),n=r.steps.length;
   let body;
   if(i<0){
-    body=`<div class="stepno">Before you start · ${r.fixed?esc(r.fixed):`${p} ${p>1?"portions":"portion"}`}</div><div class="steptext" style="font-size:clamp(22px,3vw,30px)">Get everything out. Tick things off as you go.</div>
+    body=`<div class="stepno">Before you start · ${r.fixed?esc(r.fixed):`${Number.isInteger(p)?p:"about "+Math.round(p*10)/10} ${p>1?"portions":"portion"}`}</div><div class="steptext" style="font-size:clamp(22px,3vw,30px)">Get everything out. Tick things off as you go.</div>
      <ul class="miseen">${r.ing.filter(x=>x[0]!=="—").map((x,k)=>`<li><input type="checkbox" id="mi-${k}" ${C.ticks[k]?"checked":""} data-mi="${k}"><label for="mi-${k}"><b>${typeof x[0]==="number"?fmtQty(x[0]*f,x[1]):(x[0]==null?"to taste":"")}</b> ${esc(x[2])}${x[4]?` <span class="note">(${esc(x[4])})</span>`:""}</label></li>`).join("")}</ul>`;
   } else {
     const s=r.steps[i];const running=timers.find(t=>t.step===`${r.id}:${i}`&&!t.done);
@@ -1989,6 +2008,8 @@ ${MK.n?`They call it: ${MK.n}\n`:""}Return JSON only: {"n":"short dish name","zh
   catch(e){if(e&&e.code!=="cancelled")toast(e&&e.code==="rate_limited"?"Claude is busy, try again in a minute":"Couldn't fill it in. You can still type it yourself.")}
   finally{MK_BUSY=false;if(MK&&$("#mkform"))renderMaker()}}
 document.addEventListener("submit",e=>{if(e.target.id==="mkform"){e.preventDefault();mkSave()}});
+document.addEventListener("submit",e=>{if(e.target.id==="scaleform"){e.preventDefault();applyIngScale(sheetRecipe(),+e.target.dataset.idx,$("#scalein").value)}});
+document.addEventListener("keydown",e=>{if(e.target.id==="scalein"&&e.key==="Escape"){e.stopPropagation();SHEET_EDIT=null;const r=sheetRecipe();keepScroll(()=>renderSheet(r))}},true);
 document.addEventListener("change",e=>{if(e.target.id==="mk-photo")mkPhoto(e.target.files&&e.target.files[0])});
 document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest(".mk"))mkRead()});
 document.addEventListener("click",e=>{
@@ -2045,7 +2066,9 @@ document.addEventListener("click",e=>{
   if(d.vopen){setVpref(d.vopen);openRecipe(d.vopen,sheetP);renderBook();return}
   if(d.variant){const[k,m]=d.variant.split(".");const x=S.week[k][m];if(!x||!x.r)return;const sib=siblings(x.r).filter(id=>id===x.r||!isHidden(byId[id]));const nx=sib[(sib.indexOf(x.r)+1)%sib.length];if(nx===x.r)return;pushUndo();x.r=nx;commit();toast(`Switched to ${byId[nx].n}`);return}
   if(d.open){openRecipe(d.open,d.p?+d.p:null);return}
-  if(d.sp){const r=byId[document.querySelector("[data-addplan]").dataset.addplan];sheetP=Math.max(1,Math.min(20,sheetP+ +d.sp));renderSheet(r);return}
+  if(d.sp){const r=sheetRecipe();sheetP=Math.max(1,Math.min(20,sheetP+ +d.sp));SHEET_F=null;SCALED_IDX=null;keepScroll(()=>renderSheet(r));return}
+  if(d.scaleing!==undefined){const r=sheetRecipe();SHEET_EDIT=+d.scaleing;keepScroll(()=>renderSheet(r));const el=$("#scalein");if(el){el.focus();el.select()}return}
+  if(d.scalereset!==undefined){const r=sheetRecipe();if(SHEET_P0)sheetP=SHEET_P0;SHEET_F=null;SCALED_IDX=null;SHEET_EDIT=null;keepScroll(()=>renderSheet(r));return}
   if(d.addplan){const day=$("#ap-day").value,meal=$("#ap-meal").value;
     if(meal==="prep"){S.prep.push({r:d.addplan,p:Math.max(sheetP,S.people*2),manual:true});commit();toast(`Added a prep batch of ${Math.max(sheetP,S.people*2)} portions`)}
     else{S.week[day][meal]={r:d.addplan,p:sheetP};commit();toast(`Added to ${DAYS.find(x=>x[0]===day)[2]} ${meal==="l"?"lunch":"dinner"}`)}return}
