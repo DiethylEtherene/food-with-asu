@@ -94,6 +94,9 @@ export default {
     const url = new URL(req.url);
     const p = url.pathname.split("/").filter(Boolean);
     const h = cors(req, env);
+    // the link importer is open to any page (it returns only text pulled from public posts)
+    if (url.pathname === "/api/import" && req.method === "OPTIONS")
+      return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" } });
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: h });
 
     // Claude connector: https://<worker>/mcp/<KITCHEN-CODE>

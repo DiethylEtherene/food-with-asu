@@ -277,6 +277,8 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .imp .hint{font-size:12px;color:var(--ink-3);margin-top:4px}
 .imp .err{color:var(--chilli);font-size:13.5px}
 .impres{margin-top:6px}
+a.btn{display:inline-block;text-decoration:none;color:var(--ink)}
+a.btn.primary{color:var(--accent-ink)}
 .mk label.f{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
 .mk input[type=text],.mk input[type=number],.mk select,.mk textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:9px 12px;font:inherit;font-size:14.5px}
 .mk textarea{resize:vertical;line-height:1.5}
@@ -568,6 +570,7 @@ details.staples summary{cursor:pointer;font-weight:600}
    Stands in for the Claude artifact's `db` capability: window.claude.use("db") returns an object
    with the same doc / collection / onSnapshot shape, backed by the Worker over a websocket.
    With no kitchen joined it returns null and the app keeps everything on this device. */
+window.FWA_WEB = true;
 const API_BASE = "https://food-with-asu.food-with-asu-worker.workers.dev";
 const KC_LS = "fwa-kitchen";
 let KCODE = null; try { KCODE = localStorage.getItem(KC_LS); } catch (e) {}
@@ -708,6 +711,13 @@ document.addEventListener("click", e => {
 document.addEventListener("submit", e => { if (e.target.id === "kjoin") { e.preventDefault(); kJoin(document.getElementById("kcodein").value); } });
 document.addEventListener("DOMContentLoaded", kitchenBtn);
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+// …/food-with-asu/#import=<link>: open the link importer with it (used by the Claude-app version, which can't read links)
+window.addEventListener("load", () => {
+  const m = location.hash.match(/^#import=(.+)$/); if (!m) return;
+  const link = decodeURIComponent(m[1]); history.replaceState(null, "", location.pathname + location.search);
+  setTimeout(() => { if (typeof renderImport === "function") { renderImport(); impFetch(link); } }, 300);
+});
 
 </script>
 <script>
@@ -2160,6 +2170,7 @@ function renderImport(){const r=IMP.res,has=impHasRecipe();
    <p class="note">Paste an Instagram, TikTok, YouTube or recipe-website link, or Douyin's whole share text. The app reads the caption or description. It can't hear the video or read Instagram comments, so if the recipe is only there, paste it in below.</p>
    <form id="impform" class="impform" autocomplete="off"><textarea id="imp-text" rows="2" placeholder="https://www.instagram.com/reel/… (or paste the recipe text itself)">${esc(IMP.text)}</textarea><button class="btn primary" type="submit" ${IMP.busy?"disabled":""}>${IMP.busy?"Reading…":"Get recipe"}</button></form>
    ${IMP.err?`<p class="err" role="alert">${esc(IMP.err)}</p>`:""}
+   ${IMP.blocked&&IMP.res&&IMP.res.url?`<div class="callout"><b>Easiest fix:</b> open it in the website version of the cookbook, which can read links. It opens with this link already filled in.<div class="btnrow" style="margin-top:8px"><a class="btn primary" href="https://diethyletherene.github.io/food-with-asu/#import=${encodeURIComponent(IMP.res.url)}" target="_blank" rel="noopener">Read it on the website ↗</a></div><div class="note" style="margin-top:6px">Or copy the caption from Instagram and paste it below.</div></div>`:""}
    ${r?`<div class="impres">
      <div class="note">${esc(IMP_PLAT[r.platform]||"Link")}${r.author?` · ${esc(r.author)}`:""}${r.url?` · <a href="${esc(r.url)}" target="_blank" rel="noopener">open the original</a>`:""}</div>
      ${r.note?`<p class="note">${esc(r.note)}</p>`:""}
@@ -2174,14 +2185,14 @@ function renderImport(){const r=IMP.res,has=impHasRecipe();
        ${SAMPLE?"":`<button class="btn" id="impcopy">Copy a request for Claude</button>`}
      </div></div>`:""}
   </article></div>`}
-async function impFetch(text){const t=String(text||"").trim();IMP.text=t;IMP.err="";if(!t){IMP.err="Paste a link first.";renderImport();return}
+async function impFetch(text){const t=String(text||"").trim();IMP.text=t;IMP.err="";IMP.blocked=false;if(!t){IMP.err="Paste a link first.";renderImport();return}
   const link=(t.match(/https?:\/\/[^\s"'<>，。]+/)||[])[0];
   if(!link){IMP.res={platform:"",url:"",author:"",caption:""};IMP.cap=t;renderImport();return}   // pasted the recipe text itself
   IMP.busy=true;renderImport();
-  try{const r=await fetch(IMPORT_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})});const x=await r.json();
+  try{const r=await fetch(IMPORT_API,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({text:t})});const x=await r.json();
     if(!x.ok){IMP.err=x.error||"Couldn't read that link.";IMP.res={platform:"",url:link,author:"",caption:""};IMP.cap=""}
     else{IMP.res=x;IMP.cap=x.recipe?`Ingredients:\n${x.recipe.ingredients.map(i=>"- "+i).join("\n")}\n\nMethod:\n${x.recipe.steps.map((s,i)=>`${i+1}. ${s}`).join("\n")}`:(x.caption||"")}}
-  catch(e){IMP.err="This page couldn't open the link. Paste the caption or recipe below instead.";IMP.res={platform:"",url:link,author:"",caption:""};IMP.cap=""}
+  catch(e){IMP.err=window.FWA_WEB?"Couldn't reach the link reader. Check your connection, or paste the caption below.":"The Claude app doesn't let this page open other websites, so it can't read the link here.";IMP.blocked=!window.FWA_WEB;IMP.res={platform:"",url:link,author:"",caption:""};IMP.cap=""}
   IMP.busy=false;renderImport();const c=$("#imp-cap");if(c&&!IMP.cap)c.focus()}
 document.addEventListener("submit",e=>{if(e.target.id==="impform"){e.preventDefault();impFetch($("#imp-text").value)}});
 document.addEventListener("input",e=>{if(e.target.id==="imp-cap")IMP.cap=e.target.value;if(e.target.id==="imp-text")IMP.text=e.target.value});

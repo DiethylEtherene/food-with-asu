@@ -2,6 +2,7 @@
    Stands in for the Claude artifact's `db` capability: window.claude.use("db") returns an object
    with the same doc / collection / onSnapshot shape, backed by the Worker over a websocket.
    With no kitchen joined it returns null and the app keeps everything on this device. */
+window.FWA_WEB = true;
 const API_BASE = "__API_BASE__";
 const KC_LS = "fwa-kitchen";
 let KCODE = null; try { KCODE = localStorage.getItem(KC_LS); } catch (e) {}
@@ -142,3 +143,10 @@ document.addEventListener("click", e => {
 document.addEventListener("submit", e => { if (e.target.id === "kjoin") { e.preventDefault(); kJoin(document.getElementById("kcodein").value); } });
 document.addEventListener("DOMContentLoaded", kitchenBtn);
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+// …/food-with-asu/#import=<link>: open the link importer with it (used by the Claude-app version, which can't read links)
+window.addEventListener("load", () => {
+  const m = location.hash.match(/^#import=(.+)$/); if (!m) return;
+  const link = decodeURIComponent(m[1]); history.replaceState(null, "", location.pathname + location.search);
+  setTimeout(() => { if (typeof renderImport === "function") { renderImport(); impFetch(link); } }, 300);
+});
