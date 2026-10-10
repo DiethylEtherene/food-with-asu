@@ -17,11 +17,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
 :root{
-  --bg:#e8eef1; --surface:#f5f8f9; --surface-2:#dfe7eb; --line:rgba(13,110,140,.26);
-  --ink:#0f1a22; --ink-2:#3e4d57; --ink-3:#5a6a76;
+  --bg:#e8eef1; --surface:#f4f7f8; --surface-2:#dfe8ec; --line:rgba(13,110,140,.26);
+  --ink:#0f1a22; --ink-2:#0f1a22; --ink-3:#5a6a76;
   --accent:#0d7ea6; --accent-ink:#FFFFFF; --accent-soft:rgba(13,126,166,.12); --accent-2:#0d8f78;
   --saffron:#0d8f78; --saffron-soft:rgba(13,143,120,.12); --chilli:#ff2b8d; --chilli-soft:rgba(255,43,141,.1);
-  --cyan:#0d7ea6; --mint:#0d8f78; --pink:#ff2b8d; --grid:rgba(13,110,140,.06); --wash:rgba(13,126,166,.12); --rule:rgba(13,110,140,.42);
+  --cyan:#0d7ea6; --mint:#0d8f78; --pink:#ff2b8d; --grid:rgba(13,110,140,.06); --wash:rgba(13,126,166,.12); --rule:rgba(13,110,140,.42); --panel:rgba(255,255,255,.5); --btn:rgba(255,255,255,.62); --slot:rgba(232,238,241,.4);
   --shadow:none;
   --f-display:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
   --f-body:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
@@ -31,21 +31,21 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#060d14; --surface:#0a1720; --surface-2:#10222d; --line:rgba(120,230,240,.22);
-    --ink:#e9f8f4; --ink-2:#c3dad5; --ink-3:#7f9fb2;
+    --bg:#060d14; --surface:#07121a; --surface-2:#0b1c26; --line:rgba(120,230,240,.22);
+    --ink:#e9f8f4; --ink-2:#d8ece6; --ink-3:#7f9fb2;
     --accent:#52dcff; --accent-ink:#04121a; --accent-soft:rgba(82,220,255,.12); --accent-2:#6dffd0;
     --saffron:#6dffd0; --saffron-soft:rgba(109,255,208,.12); --chilli:#ff3c9f; --chilli-soft:rgba(255,60,159,.14);
-    --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22);
+    --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22); --panel:rgba(8,24,34,.44); --btn:rgba(8,24,34,.66); --slot:rgba(6,13,20,.35);
     --shadow:none;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#060d14; --surface:#0a1720; --surface-2:#10222d; --line:rgba(120,230,240,.22);
-  --ink:#e9f8f4; --ink-2:#c3dad5; --ink-3:#7f9fb2;
+  --bg:#060d14; --surface:#07121a; --surface-2:#0b1c26; --line:rgba(120,230,240,.22);
+  --ink:#e9f8f4; --ink-2:#d8ece6; --ink-3:#7f9fb2;
   --accent:#52dcff; --accent-ink:#04121a; --accent-soft:rgba(82,220,255,.12); --accent-2:#6dffd0;
   --saffron:#6dffd0; --saffron-soft:rgba(109,255,208,.12); --chilli:#ff3c9f; --chilli-soft:rgba(255,60,159,.14);
-  --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22);
+  --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22); --panel:rgba(8,24,34,.44); --btn:rgba(8,24,34,.66); --slot:rgba(6,13,20,.35);
   --shadow:none;
 }
 *{box-sizing:border-box}
@@ -502,6 +502,32 @@ header.top{border-bottom-color:var(--rule)}
 nav.tabs [role=tab][aria-selected="true"]{color:var(--cyan)}
 .q,.ing .q{color:var(--cyan)}
 .toast{font-family:var(--f-mono);letter-spacing:.06em;font-size:12.5px}
+
+/* exact site surfaces + pink highlights (the site uses pink for index numbers, hovers, focus and "live" marks) */
+.card,.filters,.aibox,.askbox,.slot,.selchip,.search,.stackrow2,.kcode,.kwhy li{background:var(--panel)}
+.chip,.tag{background:var(--panel);color:var(--ink-3)}
+.btn:not(.primary),.ib:not(.danger){background:var(--btn);color:var(--cyan)}
+.chip[aria-pressed="true"],.chip.have{background:color-mix(in srgb,var(--pink) 9%,transparent) !important;border-color:var(--pink) !important;color:var(--pink) !important}
+nav.tabs [role=tab][aria-selected="true"]{color:var(--pink) !important;border-bottom-color:var(--pink) !important}
+nav.tabs .count{color:var(--pink);background:transparent;border:1px solid var(--line)}
+.seg button[aria-pressed="true"],.seg.ppl span{color:var(--pink)}
+:focus-visible{outline:1px solid var(--pink) !important;outline-offset:2px}
+.steps li::before{background:transparent;color:var(--pink);border:1px solid var(--pink)}
+.pbar i{background:var(--pink)}
+.card .thumb span.stackbadge,.card .thumb.ph span.stackbadge{background:var(--pink);color:#fff}
+.stackinfo b,.filters .fon{color:var(--pink);border-color:var(--pink)}
+.selchip.must{background:color-mix(in srgb,var(--pink) 9%,transparent);border-color:var(--pink)}
+.selchip.must .selname,.selchip.must button{color:var(--pink)}
+.qbtn.on{background:var(--pink);color:#fff}
+.brand h1 span{color:var(--pink)}
+.tonight .t1 b,.tonight .t1{color:var(--mint)}
+.match b{color:var(--pink)}
+.card:hover{border-color:var(--pink)}
+a{color:var(--cyan)}
+a:hover{color:var(--pink)}
+*{font-weight:400 !important}
+b,strong{font-weight:700 !important}
+input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
 
 .hdrr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbtn{margin-right:10px;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
