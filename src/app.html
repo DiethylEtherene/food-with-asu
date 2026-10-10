@@ -2151,8 +2151,9 @@ function renderAll(){
 // earlier versions ticked staples per shopping line ("name|unit"); carry those ticks into the pantry
 function migrateHave(){S.pantry=S.pantry||{};for(const k of Object.keys(S.have||{}))if(S.have[k]){const n=k.split("|")[0];if(n&&!S.pantry[n])S.pantry[n]=1}
   // water was never a pantry item
-  for(const k of Object.keys(S.pantry))if(isWater(k))delete S.pantry[k];if(Array.isArray(S.pantryExtra))S.pantryExtra=S.pantryExtra.filter(n=>!isWater(n))}
-const PANTRY_GROUPS=["Oils & fats","Sauces & pastes","Seasonings & spices","Vinegars & cooking wine","Dry goods & tins"];
+  const merged={};for(const[k,v]of Object.entries(S.pantry)){const c=pantryCanon(k);if(!c||isWater(c))continue;merged[c]=Math.max(merged[c]||0,v)}S.pantry=merged;
+  if(Array.isArray(S.pantryExtra))S.pantryExtra=[...new Set(S.pantryExtra.map(pantryCanon).filter(n=>n&&!isWater(n)))]}
+const PANTRY_GROUPS=["Oils & fats","Sauces & pastes","Seasonings & spices","Stock & bouillon","Vinegars & cooking wine","Rice, pasta & noodles","Baking & sweet","Tins & dry goods"];
 const PANTRY_BASE={
  "Oils & fats":["vegetable oil","olive oil","extra virgin olive oil","sesame oil","chilli oil","lard","beef tallow","ghee or butter"],
  "Sauces & pastes":["soy sauce","dark soy sauce","oyster sauce","fish sauce","hoisin sauce","kecap manis","doubanjiang","gochujang","miso paste","red curry paste","japanese curry roux","yakiniku sauce","buldak sauce","sriracha","thai sweet chilli sauce","chilli crisp","chinese satay sauce","ketchup","mayonnaise","dijon mustard","worcestershire sauce","tomato purée","peanut butter","honey"],
@@ -2161,31 +2162,64 @@ const PANTRY_BASE={
  "Dry goods & tins":["plain flour","cornflour","panko breadcrumbs","jasmine rice","pasta","spaghetti","noodle portions","chopped tomatoes","coconut milk"]
 };
 const LONG_RE=/sauce|paste|purée|ketchup|mayonnaise|mustard|pesto|honey|roux|crisp|oil|vinegar|mirin|sake|seasoning|powder|spice|seeds|peppercorn|chillies|flakes|stock|flour|starch|breadcrumbs|sugar|rice$|pasta|spaghetti|linguine|fettuccine|penne|rigatoni|noodle|chopped tomatoes|coconut milk|sweetcorn|curry|miso|gochujang|doubanjiang|gochugaru|dashi|nori|chocolate|nutella|vanilla|cocoa|coffee|condensed milk|anise|cinnamon|bay leaves|cloves|oregano|wine|wasabi|kecap|fenugreek|bicarbonate|baking powder|peanut butter|peanuts|hazelnuts|matcha|osmanthus|sago|vermicelli|refried beans/;
-function pantryGroup(n){if(/oil|lard|tallow|ghee/.test(n))return"Oils & fats";if(/vinegar|wine|mirin|sake/.test(n))return"Vinegars & cooking wine";
-  if(/sauce|paste|purée|ketchup|mayonnaise|mustard|pesto|honey|roux|crisp|miso|gochujang|doubanjiang|kecap|peanut butter|nutella|jam/.test(n))return"Sauces & pastes";
-  if(/flour|starch|breadcrumbs|rice|pasta|spaghetti|linguine|fettuccine|penne|rigatoni|noodle|tomatoes|coconut milk|sweetcorn|chocolate|condensed|beans|vermicelli|sago|peanuts|hazelnuts|nori/.test(n))return"Dry goods & tins";return"Seasonings & spices"}
+function pantryGroup(n){
+  if(/crispy onion|fried shallot|fried onion/.test(n))return"Tins & dry goods";
+  if(/(^| )oil$|^lard|tallow|ghee|dripping|(^| )butter$/.test(n)&&!/peanut butter/.test(n))return"Oils & fats";
+  if(/vinegar|wine$|mirin|sake/.test(n))return"Vinegars & cooking wine";
+  if(/stock|bouillon|chicken powder|dashi|katsuobushi|bonito/.test(n))return"Stock & bouillon";
+  if(/(^| )rice$|rice noodle|rice cake|pasta|spaghetti|linguine|fettuccine|penne|rigatoni|fusilli|tagliatelle|orzo|lasagne|noodle|vermicelli|udon|ramen|couscous/.test(n))return"Rice, pasta & noodles";
+  if(/sauce|paste|purée|ketchup|mayonnaise|mustard|pesto|roux|chilli crisp|miso|gochujang|doubanjiang|kecap|peanut butter|jam|wasabi|sriracha|tabasco|hot honey/.test(n))return"Sauces & pastes";
+  if(/sugar|honey|syrup|cocoa|chocolate|vanilla|baking powder|bicarbonate|icing|condensed|nutella|matcha|instant coffee|osmanthus|sago|gelatine|yeast/.test(n))return"Baking & sweet";
+  if(/flour|starch|breadcrumbs|panko|tomatoes|coconut milk|sweetcorn|beans|peanuts|hazelnuts|almonds|nuts$|nori|lentils|chickpeas|dried mushroom/.test(n))return"Tins & dry goods";
+  return"Seasonings & spices"}
+/* one name per pantry item: "japanese curry roux blocks (s&b…)" and "japanese curry roux" are the same jar */
+const PANTRY_SKIP=/^(pasta or rice|rice or naan|noodle portions?|ramen seasoning sachet|crisps|salt (and|&) .*pepper)$/;
+const PANTRY_ALIAS=[
+ [/japanese curry roux|curry roux/,"japanese curry roux"],[/doubanjiang|chilli bean paste|broad bean paste/,"doubanjiang"],
+ [/^(light )?soy sauce$|^soy$/,"soy sauce"],[/^(tomato )?ketchup$/,"ketchup"],[/miso/,"miso paste"],[/^wasabi/,"wasabi"],
+ [/sweet chilli/,"sweet chilli sauce"],[/sweet bean sauce|tianmianjiang/,"sweet bean sauce"],[/olive oil/,"olive oil"],[/sesame oil/,"sesame oil"],
+ [/^ghee/,"ghee"],[/bay lea/,"bay leaves"],[/cinnamon stick|cassia/,"cinnamon sticks"],[/sesame seeds/,"sesame seeds"],
+ [/white pepper/,"white pepper"],[/^(ground |cracked |freshly ground )?black pepper/,"black pepper"],[/^(sea salt|salt|table salt|fine salt)$/,"salt"],
+ [/^(sugar|caster sugar|granulated sugar|white sugar)$/,"sugar"],[/brown sugar|muscovado/,"brown sugar"],
+ [/garlic (granules|powder)/,"garlic powder"],[/onion (granules|powder)/,"onion powder"],
+ [/^chicken stock|^stock cubes?$|^stock$|bouillon cube/,"chicken stock cubes"],[/^beef stock/,"beef stock cubes"],[/^vegetable stock/,"vegetable stock cubes"],
+ [/hondashi|dashi (powder|granules)/,"dashi powder"],[/shaoxing/,"shaoxing wine"],[/^(cooking )?sake$/,"sake"],[/^(dry )?white wine$/,"white wine"],[/^(dry )?red wine$/,"red wine"],
+ [/nori sheet/,"nori sheets"],[/^(jasmine )?rice$|^jasmine/,"jasmine rice"],[/ramen noodles/,"ramen noodles"],[/chopped tomatoes/,"chopped tomatoes"],
+ [/chilli flakes|chili flakes|crushed chillies|red pepper flakes/,"chilli flakes"],[/^dried (red )?chillies$|^dried chilli$/,"dried red chillies"],
+ [/kashmiri chilli/,"kashmiri chilli powder"],[/^(mild |hot )?chilli powder$/,"chilli powder"],[/italian (seasoning|herbs)|mixed herbs/,"italian seasoning"],
+ [/^(white )?sesame seeds$/,"sesame seeds"],[/^(plain|all-purpose) flour$/,"plain flour"],[/^cornflour|cornstarch|corn starch/,"cornflour"],
+ [/panko/,"panko breadcrumbs"],[/coconut milk/,"coconut milk"],[/^(tomato )?purée$|tomato paste|tomato purée/,"tomato purée"],
+];
+function pantryCanon(raw){let n=String(raw||"").toLowerCase().replace(/\([^)]*\)?/g," ").split(",")[0].replace(/\s+/g," ").trim();
+  if(!n||PANTRY_SKIP.test(n))return null;
+  if(/ or /.test(n))n=n.split(" or ")[0].trim();
+  n=n.replace(/ (blocks?|pieces?|piece)$/,"").trim();
+  for(const[re,c]of PANTRY_ALIAS)if(re.test(n))return c;
+  return n}
 let PANTRY_ALL=null;
 function pantryAll(){
   if(PANTRY_ALL)return PANTRY_ALL;const m=new Map();
-  for(const[g,list]of Object.entries(PANTRY_BASE))for(const n of list)m.set(n,g);
-  for(const r of RECIPES)for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();const a=i[3];if(!n||m.has(n)||/cooked|fresh |& /.test(n)||isWater(n))continue;
-    if(a==="staple"||a==="spice"||((a==="world"||a==="cupboard"||a==="drink")&&LONG_RE.test(n)))m.set(n,pantryGroup(n))}
+  const add=raw=>{const n=pantryCanon(raw);if(n&&!isWater(n)&&!m.has(n))m.set(n,pantryGroup(n))};
+  for(const list of Object.values(PANTRY_BASE))list.forEach(add);
+  for(const r of RECIPES)for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();const a=i[3];if(!n||/cooked|fresh |& /.test(n)||isWater(n))continue;
+    if(a==="staple"||a==="spice"||((a==="world"||a==="cupboard"||a==="drink")&&LONG_RE.test(n)))add(n)}
   return PANTRY_ALL=m;
 }
+const PANTRY_BASE_SET=new Set(Object.values(PANTRY_BASE).flat().map(pantryCanon));
 // 1 = have it, 2 = have it but running low
-function pState(n){return(S.pantry||{})[n]||0}
+function pState(n){const c=pantryCanon(n);return c?(S.pantry||{})[c]||0:0}
 function inPantry(name){const n=String(name).toLowerCase();if(pState(n))return true;
   if(/ & | or /.test(n))return n.split(/ & | or /).every(x=>pState(x.trim()));return false}
 function renderPantry(){
   const el=$("#pantrylist");if(!el)return;
-  const all=new Map(pantryAll());for(const n of S.pantryExtra||[])if(!all.has(n))all.set(n,pantryGroup(n));
+  const all=new Map(pantryAll());for(const x of S.pantryExtra||[]){const n=pantryCanon(x);if(n&&!all.has(n))all.set(n,pantryGroup(n))}
   const q=($("#padd")?.value||"").trim().toLowerCase();
   const have=[...all.keys()].filter(n=>pState(n)).length,low=[...all.keys()].filter(n=>pState(n)===2).length;
   $("#pantrysum").textContent=`${have} item${have===1?"":"s"} in the pantry${low?` · ${low} running low (on the shopping list)`:""}`;
   $("#c-pantry").textContent=have||"";
   // things this week's meals need that aren't ticked yet
-  const needed=[...new Set(buildShop().map(e=>e.name).filter(n=>all.has(n)&&!pState(n)))].sort();
-  const chip=n=>{const st=pState(n);const custom=(S.pantryExtra||[]).includes(n)&&!(PANTRY_BASE[all.get(n)]||[]).includes(n);
+  const needed=[...new Set(buildShop().map(e=>pantryCanon(e.name)).filter(n=>n&&all.has(n)&&!pState(n)))].sort();
+  const chip=n=>{const st=pState(n);const custom=(S.pantryExtra||[]).map(pantryCanon).includes(n)&&!PANTRY_BASE_SET.has(n);
     return `<span class="pchip${st===1?" have":st===2?" low":""}"><button data-pt="${esc(n)}" aria-pressed="${!!st}">${st?"✓ ":""}${esc(n)}</button>${st?`<button class="plow" data-plow="${esc(n)}" title="Running low? Adds it to the shopping list">${st===2?"low!":"low?"}</button>`:""}${custom?`<button class="prm" data-prm="${esc(n)}" aria-label="Remove ${esc(n)}">×</button>`:""}</span>`};
   let h="";
   if(needed.length&&!q)h+=`<div class="pgroup needed"><h4>Needed for this week's meals. Got these?</h4><div class="pchips">${needed.map(chip).join("")}</div></div>`;
@@ -2194,7 +2228,7 @@ function renderPantry(){
   if(q&&![...all.keys()].some(n=>n.includes(q)))h+=`<p class="note">“${esc(q)}” isn't in the list yet. Press Add to put it in your pantry.</p>`;
   el.innerHTML=h;
 }
-function addPantry(name){const n=String(name).trim().toLowerCase().replace(/\s+/g," ").slice(0,40);if(!n)return;
+function addPantry(name){const n=(pantryCanon(name)||"").slice(0,40);if(!n)return;
   S.pantryExtra=S.pantryExtra||[];if(!pantryAll().has(n)&&!S.pantryExtra.includes(n))S.pantryExtra.push(n);
   S.pantry=S.pantry||{};S.pantry[n]=1;$("#padd").value="";commit();toast(`Added ${n} to the pantry`)}
 document.addEventListener("input",e=>{if(e.target.id==="padd")renderPantry()});
@@ -2440,7 +2474,7 @@ function mergeCustom(list){
   for(const r of list){if(!r||!r.id||!r.ing)continue;r.custom=true;
     if(r.mine){r.plat="own";r.src="ours";r.by=r.by||"us"}else{r.plat="ai";r.src="ai";r.by="Claude"}
     r.tags=r.tags||[];RECIPES.unshift(r);byId[r.id]=r}
-  CUSTOM=list;rebuildGroups();renderChips();renderBook();renderPlan();renderFridge();
+  CUSTOM=list;PANTRY_ALL=null;rebuildGroups();renderChips();renderBook();renderPlan();renderFridge();
 }
 async function saveCustom(r){
   if(!r)return;const rec={...r,savedOn:new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"})};delete rec.saved;
@@ -2768,7 +2802,7 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
 function fallbackCopy(txt){const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("List copied")}catch(e){toast("Select and copy the list manually")}ta.remove()}
 document.addEventListener("change",e=>{
   const t=e.target;if(t.dataset.got){S.got[t.dataset.got]=t.checked;if(!t.checked)delete S.got[t.dataset.got];commit()}
-  else if(t.dataset.pantryck){S.pantry=S.pantry||{};if(t.checked)S.pantry[t.dataset.pantryck]=1;else delete S.pantry[t.dataset.pantryck];commit();if(t.checked)toast(`${t.dataset.pantryck} saved to the pantry`)}
+  else if(t.dataset.pantryck){S.pantry=S.pantry||{};const pk=pantryCanon(t.dataset.pantryck)||t.dataset.pantryck;if(t.checked)S.pantry[pk]=1;else delete S.pantry[pk];commit();if(t.checked)toast(`${t.dataset.pantryck} saved to the pantry`)}
   else if(t.dataset.mi&&C){C.ticks[t.dataset.mi]=t.checked}
 });
 $("#q").addEventListener("input",e=>{filter.q=e.target.value;renderBook();if(!ASK_Q)renderAskBox()});
