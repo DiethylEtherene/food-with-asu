@@ -1726,7 +1726,7 @@ function buildShop(){
   for(const b of S.prep)if(byId[b.r])need.push([byId[b.r],b.p]);
   const map=new Map();
   for(const[r,p]of need){const f=scaleOf(r,p);
-    for(const i of r.ing){if(i[0]==="—")continue;const[q,u,name,aisle]=i;if(!aisle)continue;
+    for(const i of r.ing){if(i[0]==="—")continue;const[q,u,name,aisle]=i;if(!aisle||isWater(name))continue;
       let unit=u,qty=typeof q==="number"?q*f:null;
       if(u==="tsp"||u==="tbsp"){unit="tsp";qty=qty==null?null:toTsp(qty,u)}
       if(u==="l"){unit="ml";qty=qty==null?null:qty*1000}
@@ -1792,7 +1792,7 @@ function listText(){
    First matching pattern wins, so specific names come before general ones. */
 const NUTDB=[
  // ---------- things that add nothing ----------
- [/^(water|ice|boiling water)\b/,[0,0,0,0,0,0,0]],
+ [/^((cold|hot|warm|boiling|freshly boiled|just[- ]boiled|ice[- ]cold|tap|filtered|room[- ]temperature) )?water$|^ice( cubes)?$|^ice water$/,[0,0,0,0,0,0,0]],
  [/bay lea|star anise|cinnamon stick|whole cloves|food colou?r|vanilla|osmanthus|^beef bones|kombu/,[0,0,0,0,0,0,0],{t:"p",e:0}],
  // ---------- more ingredients you might cook with later ----------
  [/oat milk|soy milk|soya milk|almond milk|rice milk|coconut drink/,[45,1,6,1.5,0.5,3,0.1],{t:"l"}],
@@ -2330,7 +2330,9 @@ function renderAll(){
 }
 /* ============ PANTRY ============ */
 // earlier versions ticked staples per shopping line ("name|unit"); carry those ticks into the pantry
-function migrateHave(){S.pantry=S.pantry||{};for(const k of Object.keys(S.have||{}))if(S.have[k]){const n=k.split("|")[0];if(n&&!S.pantry[n])S.pantry[n]=1}}
+function migrateHave(){S.pantry=S.pantry||{};for(const k of Object.keys(S.have||{}))if(S.have[k]){const n=k.split("|")[0];if(n&&!S.pantry[n])S.pantry[n]=1}
+  // water was never a pantry item
+  for(const k of Object.keys(S.pantry))if(isWater(k))delete S.pantry[k];if(Array.isArray(S.pantryExtra))S.pantryExtra=S.pantryExtra.filter(n=>!isWater(n))}
 const PANTRY_GROUPS=["Oils & fats","Sauces & pastes","Seasonings & spices","Vinegars & cooking wine","Dry goods & tins"];
 const PANTRY_BASE={
  "Oils & fats":["vegetable oil","olive oil","extra virgin olive oil","sesame oil","chilli oil","lard","beef tallow","ghee or butter"],
@@ -2347,7 +2349,7 @@ let PANTRY_ALL=null;
 function pantryAll(){
   if(PANTRY_ALL)return PANTRY_ALL;const m=new Map();
   for(const[g,list]of Object.entries(PANTRY_BASE))for(const n of list)m.set(n,g);
-  for(const r of RECIPES)for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();const a=i[3];if(!n||m.has(n)||/cooked|fresh |& /.test(n))continue;
+  for(const r of RECIPES)for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();const a=i[3];if(!n||m.has(n)||/cooked|fresh |& /.test(n)||isWater(n))continue;
     if(a==="staple"||a==="spice"||((a==="world"||a==="cupboard"||a==="drink")&&LONG_RE.test(n)))m.set(n,pantryGroup(n))}
   return PANTRY_ALL=m;
 }
@@ -2419,7 +2421,7 @@ function pantryPicks(q,count){
   if(q){
     const names=[...pantryAll().keys()].filter(n=>n.includes(q)).sort((a,b)=>(pState(b)>0)-(pState(a)>0)||a.length-b.length).slice(0,24);
     const exact=names.includes(q)||count.has(q);
-    return `<div class="fgroup"><h4>Pantry &amp; seasonings</h4><div class="chips" style="margin:0">${names.map(pchip).join("")}${exact?"":`<button class="chip addpick" data-fing="${esc("+"+q)}">+ Use “${esc(q)}”</button>`}</div></div>`;
+    return `<div class="fgroup"><h4>Pantry &amp; seasonings</h4><div class="chips" style="margin:0">${names.map(pchip).join("")}${exact||isWater(q)?"":`<button class="chip addpick" data-fing="${esc("+"+q)}">+ Use “${esc(q)}”</button>`}</div></div>`;
   }
   const mine=Object.keys(S.pantry||{}).sort();
   return `<details class="fgroup fpantry"${FP_OPEN?" open":""}><summary><h4>From your pantry (${mine.length})</h4><span class="note">Seasonings, sauces and other long-lasting things. Pick one to cook with it, then ☆ it to make it a must.</span></summary>
@@ -2485,10 +2487,11 @@ function cleanAi(x,i){
 }
 // what a suggested recipe would make you buy, given the fridge picks and the pantry
 const FREE=new Set(["salt","water","black pepper","salt & black pepper","salt & pepper","ice"]);
+const isWater=n=>/^((cold|hot|warm|boiling|freshly boiled|just[- ]boiled|ice[- ]cold|tap|filtered|room[- ]temperature) )?water$|^ice( cubes)?$|^ice water$/.test(String(n).toLowerCase().trim());
 function needsToBuy(r){
   const pc=new Set();for(const n of Object.keys(S.pantry||{})){const c=canon(n,"cupboard");if(c)pc.add(c[0])}
   const out=[];for(const i of r.ing){if(i[0]==="—")continue;const n=String(i[2]).toLowerCase();
-    if(FREE.has(n)||inPantry(n)||/optional/i.test(i[4]||""))continue;
+    if(FREE.has(n)||isWater(n)||inPantry(n)||/optional/i.test(i[4]||""))continue;
     if([...FSEL].some(k=>isP(k)&&(n.includes(k.slice(1))||k.slice(1).includes(n))))continue;const c=canon(n,i[3]);if(c&&(FSEL.has(c[0])||pc.has(c[0])))continue;out.push(n)}
   return [...new Set(out)];
 }

@@ -7,7 +7,7 @@
    First matching pattern wins, so specific names come before general ones. */
 const NUTDB=[
  // ---------- things that add nothing ----------
- [/^(water|ice|boiling water)\b/,[0,0,0,0,0,0,0]],
+ [/^((cold|hot|warm|boiling|freshly boiled|just[- ]boiled|ice[- ]cold|tap|filtered|room[- ]temperature) )?water$|^ice( cubes)?$|^ice water$/,[0,0,0,0,0,0,0]],
  [/bay lea|star anise|cinnamon stick|whole cloves|food colou?r|vanilla|osmanthus|^beef bones|kombu/,[0,0,0,0,0,0,0],{t:"p",e:0}],
  // ---------- more ingredients you might cook with later ----------
  [/oat milk|soy milk|soya milk|almond milk|rice milk|coconut drink/,[45,1,6,1.5,0.5,3,0.1],{t:"l"}],
