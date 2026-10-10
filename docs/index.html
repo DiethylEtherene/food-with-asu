@@ -551,6 +551,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
 #plist .pkstack{box-shadow:6px 6px 0 -1px var(--surface),6px 6px 0 0 color-mix(in srgb,var(--pink) 75%,transparent);margin:0 6px 6px 0}
 
 /* recipe sections */
+.sheet h2 .kcalbadge{display:inline-block;vertical-align:middle;margin-left:10px;padding:3px 8px;border:1px solid var(--mint);color:var(--mint);font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;line-height:1.3;white-space:nowrap;position:relative;top:-3px}
+.pcount{margin:2px 0 8px}
 .stabs{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0 10px;background:var(--bg);border:1px solid var(--line)}
 .stabs button{border:0;border-left:1px solid var(--line);background:transparent;padding:10px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:2px;
   font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid transparent}
@@ -2165,7 +2167,7 @@ function renderSheet(r){
    <button class="close" data-closesheet aria-label="Close">×</button>
    ${pic(r.id)?`<img class="hero" src="${pic(r.id)}" alt="">`:""}
    <div class="eyebrow">${CATS[r.cat]} · ${PROTEIN[r.pro][0]}</div>
-   <h2>${esc(r.n)}</h2>
+   <h2>${esc(r.n)}<span class="kcalbadge" title="Estimated per portion">${Math.round(nutOf(r).per.kcal)} kcal</span></h2>
    ${r.zh?`<div class="zh" style="font-size:16px;margin-bottom:4px">${esc(r.zh)}</div>`:""}
    ${GROUP_OF[r.id]?`<div class="variants"><span class="note">Versions</span><span class="vtog">${GROUP_OF[r.id].v.filter(([id])=>id===r.id||!isHidden(byId[id])).map(([id,l])=>`<button class="v" data-vopen="${id}" aria-pressed="${id===r.id}">${esc(l)}<span class="mono">${fmtMin(byId[id].time)}</span></button>`).join("")}</span></div>`:""}
    <div class="src">${r.plat==="own"?`${r.link?"Imported recipe":"Our own recipe"}${r.mine&&r.by&&r.by!=="us"?` · by ${esc(r.by)}`:""}${r.mine&&r.savedOn?` · added ${esc(r.savedOn)}`:""}${r.mine?` · <button class="ib" data-mkedit="${r.id}">Edit</button>`:""}`:r.plat==="extra"?`A new idea from Claude that isn't from your saves. Every ingredient is a Sainsbury's / Waitrose regular.`:r.plat==="ai"?`${r.via==="chat"?"Written by Claude in a chat":"Suggested by Claude from what was in the fridge"}${r.savedOn?` · saved ${esc(r.savedOn)}`:""}`:r.plat==="dy"?`Douyin: ${r.vids.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a>`).join(" · ")}${r.vids.length>1?` <span class="note">(${r.vids.length} saves merged)</span>`:""}`:`From <a href="${reelUrl(r)}" target="_blank" rel="noopener">@${esc(r.by)}${r.code?" (watch the reel)":""}</a>`}${r.src.includes("adapted")?" · adapted":""}${r.link&&(r.plat==="own"||r.plat==="ai")?` · <a href="${esc(r.link)}" target="_blank" rel="noopener">watch the original${r.creator?" by "+esc(r.creator):""}</a>`:""}${r.at?` · <span class="mono">starts at ${esc(r.at)}</span> in the vlog`:""}${r.also?`<br>Also on Douyin: ${r.also.map(v=>`<a href="${dyUrl(v[0])}" target="_blank" rel="noopener">${esc(v[1])}</a> (${esc(v[2])})`).join(" · ")}`:""}</div>
@@ -2177,13 +2179,13 @@ function renderSheet(r){
    ${r.mp?`<div class="callout green"><b>Meal prep:</b> ${esc(r.mp)}</div>`:""}
    ${r.af?`<div class="callout af"><b>Air fryer:</b> ${timeLinks(r.af,"Air fryer · "+r.n.slice(0,20))}</div>`:""}
    <div class="stabs" role="tablist" aria-label="Recipe sections">
-     <button role="tab" data-stab="ing" aria-selected="${SHEET_TAB==="ing"}">Ingredients<span class="sc">${r.ing.filter(i=>i[0]!=="—").length}</span></button>
-     <button role="tab" data-stab="method" aria-selected="${SHEET_TAB==="method"}">Method<span class="sc">${r.steps.length}</span></button>
-     <button role="tab" data-stab="nut" aria-selected="${SHEET_TAB==="nut"}">Nutrition<span class="sc">${Math.round(nutOf(r).per.kcal)} kcal</span></button>
+     <button role="tab" data-stab="ing" aria-selected="${SHEET_TAB==="ing"}">Ingredients</button>
+     <button role="tab" data-stab="method" aria-selected="${SHEET_TAB==="method"}">Method</button>
+     <button role="tab" data-stab="nut" aria-selected="${SHEET_TAB==="nut"}">Nutrition</button>
    </div>
    <div class="spane" data-spane="nut" role="tabpanel"${SHEET_TAB==="nut"?"":" hidden"}>${nutPanel(r)}</div>
-   <div class="spane" data-spane="ing" role="tabpanel"${SHEET_TAB==="ing"?"":" hidden"}>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul></div>
-   <div class="spane" data-spane="method" role="tabpanel"${SHEET_TAB==="method"?"":" hidden"}><ol class="steps">${steps}</ol></div>
+   <div class="spane" data-spane="ing" role="tabpanel"${SHEET_TAB==="ing"?"":" hidden"}><div class="eyebrow pcount">${r.ing.filter(i=>i[0]!=="—").length} ingredients</div>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul></div>
+   <div class="spane" data-spane="method" role="tabpanel"${SHEET_TAB==="method"?"":" hidden"}><div class="eyebrow pcount">${r.steps.length} step${r.steps.length>1?"s":""}</div><ol class="steps">${steps}</ol></div>
    ${(()=>{if(!byId[r.id]||!RECIPES.includes(r))return"";
      if(GROUP_OF[r.id])return `<div class="stackrow"><span class="note">Stacked with ${GROUP_OF[r.id].v.filter(x=>x[0]!==r.id).map(x=>esc(byId[x[0]].n)).join(", ")}.</span> <button class="ib" data-unstack="${r.id}">Unstack</button></div>`;
      const sim=similarTo(r.id).slice(0,1);const opts=RECIPES.filter(x=>x.id!==r.id&&x.cat===r.cat&&!isHidden(x)).sort((a,b)=>a.n.localeCompare(b.n));
