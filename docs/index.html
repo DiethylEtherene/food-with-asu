@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="A shared cookbook and meal planner: weekly plans, a pantry-aware shopping list, and a cook mode with timers. Link up with a kitchen code, and connect Claude.">
-<meta name="theme-color" content="#5B4BD6">
+<meta name="theme-color" content="#0d7ea6">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,36 +14,39 @@
 <title>Food with Asu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
 :root{
-  --bg:#F4F3FA; --surface:#FFFFFF; --surface-2:#E9E7F5; --line:#D6D3EA;
-  --ink:#1C1B2E; --ink-2:#4D4B66; --ink-3:#7C7A96;
-  --accent:#5B4BD6; --accent-ink:#FFFFFF; --accent-soft:#E4E0FA; --accent-2:#2F6BDB;
-  --saffron:#D99A12; --saffron-soft:#FBEFD2; --chilli:#C4432B; --chilli-soft:#F8DED8;
-  --shadow:0 1px 2px rgba(27,38,32,.06),0 8px 24px rgba(27,38,32,.07);
-  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --f-body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
-  --r:14px;
+  --bg:#e8eef1; --surface:#f5f8f9; --surface-2:#dfe7eb; --line:rgba(13,110,140,.26);
+  --ink:#0f1a22; --ink-2:#3e4d57; --ink-3:#5a6a76;
+  --accent:#0d7ea6; --accent-ink:#FFFFFF; --accent-soft:rgba(13,126,166,.12); --accent-2:#0d8f78;
+  --saffron:#0d8f78; --saffron-soft:rgba(13,143,120,.12); --chilli:#ff2b8d; --chilli-soft:rgba(255,43,141,.1);
+  --cyan:#0d7ea6; --mint:#0d8f78; --pink:#ff2b8d; --grid:rgba(13,110,140,.06); --wash:rgba(13,126,166,.12); --rule:rgba(13,110,140,.42);
+  --shadow:none;
+  --f-display:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --f-body:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"Courier New",monospace;
+  --r:0px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#11111C; --surface:#191A29; --surface-2:#232438; --line:#303149;
-    --ink:#E8E8F4; --ink-2:#B2B1CC; --ink-3:#83829E;
-    --accent:#A69BFF; --accent-ink:#14112B; --accent-soft:#29254A; --accent-2:#8DB6FF;
-    --saffron:#F0B73E; --saffron-soft:#3A2F14; --chilli:#F07A62; --chilli-soft:#3D1F19;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+    --bg:#060d14; --surface:#0a1720; --surface-2:#10222d; --line:rgba(120,230,240,.22);
+    --ink:#e9f8f4; --ink-2:#c3dad5; --ink-3:#7f9fb2;
+    --accent:#52dcff; --accent-ink:#04121a; --accent-soft:rgba(82,220,255,.12); --accent-2:#6dffd0;
+    --saffron:#6dffd0; --saffron-soft:rgba(109,255,208,.12); --chilli:#ff3c9f; --chilli-soft:rgba(255,60,159,.14);
+    --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22);
+    --shadow:none;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#11111C; --surface:#191A29; --surface-2:#232438; --line:#303149;
-  --ink:#E8E8F4; --ink-2:#B2B1CC; --ink-3:#83829E;
-  --accent:#A69BFF; --accent-ink:#14112B; --accent-soft:#29254A; --accent-2:#8DB6FF;
-  --saffron:#F0B73E; --saffron-soft:#3A2F14; --chilli:#F07A62; --chilli-soft:#3D1F19;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  --bg:#060d14; --surface:#0a1720; --surface-2:#10222d; --line:rgba(120,230,240,.22);
+  --ink:#e9f8f4; --ink-2:#c3dad5; --ink-3:#7f9fb2;
+  --accent:#52dcff; --accent-ink:#04121a; --accent-soft:rgba(82,220,255,.12); --accent-2:#6dffd0;
+  --saffron:#6dffd0; --saffron-soft:rgba(109,255,208,.12); --chilli:#ff3c9f; --chilli-soft:rgba(255,60,159,.14);
+  --cyan:#52dcff; --mint:#6dffd0; --pink:#ff3c9f; --grid:rgba(120,230,240,.05); --wash:rgba(24,74,92,.6); --rule:rgba(120,230,240,.22);
+  --shadow:none;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:0 120px}
@@ -451,6 +454,41 @@ details.staples summary{cursor:pointer;font-weight:600}
   .item{grid-template-columns:24px 1fr}
   .item .shoplinks{grid-column:2}
 }
+
+/* ===== site look: matches diethyletherene.github.io (blueprint grid, mono labels,
+   square 1px-ruled panels, cyan/mint/pink accents). Decoration only; layout unchanged. ===== */
+body{background:radial-gradient(circle at 66% 12%,var(--wash),transparent 58%) fixed,linear-gradient(var(--grid) 1px,transparent 1px) fixed,linear-gradient(90deg,var(--grid) 1px,transparent 1px) fixed,var(--bg);
+  background-size:auto,48px 48px,48px 48px,auto;-webkit-font-smoothing:antialiased}
+*,*::before,*::after{border-radius:0 !important}
+.dot,.sdot,.kdot,.readout-dot{border-radius:50% !important}
+h1,h2,h3,h4{font-weight:400 !important;letter-spacing:-.035em}
+.brand h1{letter-spacing:-.05em;text-shadow:-2px 1px 0 color-mix(in srgb,var(--pink) 32%,transparent),2px -1px 0 color-mix(in srgb,var(--cyan) 30%,transparent)}
+.brand h1 span{color:var(--cyan)}
+.eyebrow,.chip,.btn,.ib,.tag,.tchip,nav.tabs [role=tab],.seg button,.seg.ppl span,.forlabel,.sync,.pin,.stackbadge,.v,.count,.plat,.time,.swatch .pro,.facts span,.stepno,.lbl{font-family:var(--f-mono) !important;letter-spacing:.12em;text-transform:uppercase}
+.btn,.ib,.chip,.tchip,.tag,.seg button,nav.tabs [role=tab]{font-size:11px !important;font-weight:500}
+.eyebrow{color:var(--cyan);letter-spacing:.2em}
+.btn,.ib,.chip,.selchip,.stepper,.search,.card,.slot,.aibox,.askbox,.callout,.sheet,.kcode,.kwhy li,.stackrow2,.mkrow .btn{border-color:var(--line)}
+.btn:not(.primary):hover,.ib:not(.danger):hover,.chip:hover{border-color:var(--pink);color:var(--pink)}
+.btn.primary:hover{background:var(--pink);border-color:var(--pink)}
+.card{background:color-mix(in srgb,var(--surface) 82%,transparent)}
+.card:hover{transform:none;border-color:var(--cyan)}
+.card .thumb,.sheet .hero{position:relative}
+.card .thumb::before,.card .thumb::after{content:"";position:absolute;width:13px;height:13px;z-index:2;pointer-events:none}
+.card .thumb::before{left:8px;top:8px;border-left:1px solid var(--mint);border-top:1px solid var(--mint)}
+.card .thumb::after{right:8px;bottom:8px;border-right:1px solid var(--mint);border-bottom:1px solid var(--mint)}
+.card .thumb.ph{background:repeating-linear-gradient(-45deg,transparent 0 9px,var(--wash) 9px 10px),color-mix(in srgb,var(--pc) 12%,var(--surface))}
+.card .thumb.ph span{font-family:var(--f-display);font-weight:400;letter-spacing:-.04em}
+.tonight{background:#0f1a22;color:#e8eef1;border:1px solid var(--rule)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tonight{background:rgba(8,24,34,.82);color:#e9f8f4;border-color:var(--mint)}}
+:root[data-theme="dark"] .tonight{background:rgba(8,24,34,.82);color:#e9f8f4;border-color:var(--mint)}
+.tonight .t2{font-weight:400;letter-spacing:-.03em}
+.tonight .t1{color:var(--mint);font-family:var(--f-mono);letter-spacing:.2em}
+.tonight button{background:transparent;color:inherit;border:1px solid var(--mint);font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.12em;font-size:11px}
+.tonight button:hover{border-color:var(--pink);color:var(--pink)}
+header.top{border-bottom-color:var(--rule)}
+nav.tabs [role=tab][aria-selected="true"]{color:var(--cyan)}
+.q,.ing .q{color:var(--cyan)}
+.toast{font-family:var(--f-mono);letter-spacing:.06em;font-size:12.5px}
 
 .hdrr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbtn{margin-right:10px;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}

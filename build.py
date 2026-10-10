@@ -71,7 +71,7 @@ head = f"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="A shared cookbook and meal planner: weekly plans, a pantry-aware shopping list, and a cook mode with timers. Link up with a kitchen code, and connect Claude.">
-<meta name="theme-color" content="#5B4BD6">
+<meta name="theme-color" content="#0d7ea6">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -85,7 +85,7 @@ out.mkdir(exist_ok=True)
 
 (out / "manifest.webmanifest").write_text(json.dumps({
     "name": "Food with Asu", "short_name": "Food w/ Asu", "start_url": "./", "scope": "./",
-    "display": "standalone", "background_color": "#F4F3FA", "theme_color": "#5B4BD6",
+    "display": "standalone", "background_color": "#e8eef1", "theme_color": "#0d7ea6",
     "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}, indent=1), encoding="utf8")
