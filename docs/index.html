@@ -550,6 +550,15 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
 .card.stacked .stackinfo{border-top:1px dashed color-mix(in srgb,var(--pink) 50%,transparent);padding-top:6px}
 #plist .pkstack{box-shadow:6px 6px 0 -1px var(--surface),6px 6px 0 0 color-mix(in srgb,var(--pink) 75%,transparent);margin:0 6px 6px 0}
 
+/* recipe sections */
+.stabs{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0 10px;background:var(--bg);border:1px solid var(--line)}
+.stabs button{border:0;border-left:1px solid var(--line);background:transparent;padding:10px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid transparent}
+.stabs button:first-child{border-left:0}
+.stabs button .sc{font-size:10px;letter-spacing:.06em;color:var(--ink-3);text-transform:none}
+.stabs button[aria-selected="true"]{color:var(--mint);border-bottom-color:var(--mint);background:color-mix(in srgb,var(--mint) 7%,transparent)}
+.stabs button[aria-selected="true"] .sc{color:var(--mint)}
+.spane .nutpanel{margin-top:0}
 /* nutrition */
 .nutline{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;color:var(--mint);text-transform:uppercase}
 .nutpanel{border:1px solid var(--line);background:var(--panel);margin:14px 0 4px;padding:0 12px}
@@ -2134,9 +2143,9 @@ function openStack(g){
 }
 let sheetP=null;
 // SHEET_F: scale set by typing an amount for one ingredient ("I've got 500 g of beef"); null = scale by portions
-let SHEET_F=null,SHEET_EDIT=null,SCALED_IDX=null,SHEET_P0=null;
+let SHEET_F=null,SHEET_EDIT=null,SCALED_IDX=null,SHEET_P0=null,SHEET_TAB="ing";
 function openRecipe(id,p){
-  const r=byId[id];if(!r)return;sheetP=p||S.people;SHEET_F=null;SHEET_EDIT=null;SCALED_IDX=null;renderSheet(r);
+  const r=byId[id];if(!r)return;sheetP=p||S.people;SHEET_F=null;SHEET_EDIT=null;SCALED_IDX=null;SHEET_TAB="ing";renderSheet(r);
 }
 const sheetRecipe=()=>byId[document.querySelector("[data-addplan]")?.dataset.addplan];
 const keepScroll=fn=>{const y=document.querySelector("#sheet .sheet")?.scrollTop||0;fn();const el=document.querySelector("#sheet .sheet");if(el)el.scrollTop=y};
@@ -2167,9 +2176,14 @@ function renderSheet(r){
    ${r.note?`<div class="callout">${esc(r.note)}</div>`:""}
    ${r.mp?`<div class="callout green"><b>Meal prep:</b> ${esc(r.mp)}</div>`:""}
    ${r.af?`<div class="callout af"><b>Air fryer:</b> ${timeLinks(r.af,"Air fryer · "+r.n.slice(0,20))}</div>`:""}
-   ${nutPanel(r)}
-   <h4>Ingredients</h4>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul>
-   <h4>Method</h4><ol class="steps">${steps}</ol>
+   <div class="stabs" role="tablist" aria-label="Recipe sections">
+     <button role="tab" data-stab="ing" aria-selected="${SHEET_TAB==="ing"}">Ingredients<span class="sc">${r.ing.filter(i=>i[0]!=="—").length}</span></button>
+     <button role="tab" data-stab="method" aria-selected="${SHEET_TAB==="method"}">Method<span class="sc">${r.steps.length}</span></button>
+     <button role="tab" data-stab="nut" aria-selected="${SHEET_TAB==="nut"}">Nutrition<span class="sc">${Math.round(nutOf(r).per.kcal)} kcal</span></button>
+   </div>
+   <div class="spane" data-spane="nut" role="tabpanel"${SHEET_TAB==="nut"?"":" hidden"}>${nutPanel(r)}</div>
+   <div class="spane" data-spane="ing" role="tabpanel"${SHEET_TAB==="ing"?"":" hidden"}>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul></div>
+   <div class="spane" data-spane="method" role="tabpanel"${SHEET_TAB==="method"?"":" hidden"}><ol class="steps">${steps}</ol></div>
    ${(()=>{if(!byId[r.id]||!RECIPES.includes(r))return"";
      if(GROUP_OF[r.id])return `<div class="stackrow"><span class="note">Stacked with ${GROUP_OF[r.id].v.filter(x=>x[0]!==r.id).map(x=>esc(byId[x[0]].n)).join(", ")}.</span> <button class="ib" data-unstack="${r.id}">Unstack</button></div>`;
      const sim=similarTo(r.id).slice(0,1);const opts=RECIPES.filter(x=>x.id!==r.id&&x.cat===r.cat&&!isHidden(x)).sort((a,b)=>a.n.localeCompare(b.n));
@@ -2868,6 +2882,10 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
   if(d.unstack){unstack(d.unstack);openRecipe(d.unstack,sheetP);toast("Unstacked. It's its own card again.");return}
   if(d.stack){openStack(d.stack);return}
   if(d.pkstack){PK_OPEN.has(d.pkstack)?PK_OPEN.delete(d.pkstack):PK_OPEN.add(d.pkstack);renderPickList();return}
+  if(d.stab){SHEET_TAB=d.stab;const sh=document.querySelector("#sheet .sheet");
+    sh.querySelectorAll("[data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===SHEET_TAB));
+    sh.querySelectorAll("[data-spane]").forEach(p=>p.hidden=p.dataset.spane!==SHEET_TAB);
+    const bar=sh.querySelector(".stabs");if(bar&&sh.scrollTop>bar.offsetTop)sh.scrollTop=bar.offsetTop;return}
   if(d.stackchoose){setVpref(d.stackchoose);renderBook();openRecipe(d.stackchoose);return}
   if(d.vopen){setVpref(d.vopen);openRecipe(d.vopen,sheetP);renderBook();return}
   if(d.variant){const[k,m]=d.variant.split(".");const x=S.week[k][m];if(!x||!x.r)return;const sib=siblings(x.r).filter(id=>id===x.r||!isHidden(byId[id]));const nx=sib[(sib.indexOf(x.r)+1)%sib.length];if(nx===x.r)return;pushUndo();x.r=nx;commit();toast(`Switched to ${byId[nx].n}`);return}
