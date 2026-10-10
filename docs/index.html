@@ -470,8 +470,10 @@ details.staples summary{cursor:pointer;font-weight:600}
 
 /* ===== site look: matches diethyletherene.github.io (blueprint grid, mono labels,
    square 1px-ruled panels, cyan/mint/pink accents). Decoration only; layout unchanged. ===== */
-body{background:radial-gradient(circle at 66% 12%,var(--wash),transparent 58%) fixed,linear-gradient(var(--grid) 1px,transparent 1px) fixed,linear-gradient(90deg,var(--grid) 1px,transparent 1px) fixed,var(--bg);
-  background-size:auto,48px 48px,48px 48px,auto;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse 70% 55% at 50% 50%,var(--wash),transparent 100%),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:auto,48px 48px,48px 48px}
 *,*::before,*::after{border-radius:0 !important}
 .dot,.sdot,.kdot,.readout-dot{border-radius:50% !important}
 h1,h2,h3,h4{font-weight:400 !important;letter-spacing:-.035em}
