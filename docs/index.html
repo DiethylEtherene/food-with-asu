@@ -251,6 +251,19 @@ button.tchip:hover{filter:brightness(.95);outline:2px solid var(--saffron)}
 .tag.prep{background:var(--accent-soft);color:var(--accent)}
 .tag.spicy{background:var(--chilli-soft);color:var(--chilli)}
 .vtog{display:flex;gap:4px;flex-wrap:wrap}
+#chips{display:block}
+.filters{border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 82%,transparent)}
+.filters summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;min-height:44px}
+.filters summary::-webkit-details-marker{display:none}
+.filters .ftitle{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan)}
+.filters .fon{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--cyan);color:var(--cyan)}
+.filters .fnone{font-size:12px;color:var(--ink-3)}
+.filters .fcaret{margin-left:auto;width:8px;height:8px;border-right:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);transform:rotate(45deg);transition:transform .2s}
+.filters[open] .fcaret{transform:rotate(-135deg)}
+.filters .fbody{display:grid;gap:12px;padding:4px 12px 12px;border-top:1px solid var(--line)}
+.filters .frow{display:grid;gap:6px;padding-top:8px}
+.filters .flabel{font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.filters .chips{margin:0}
 .card.stacked{position:relative;box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 color-mix(in srgb,var(--accent) 35%,var(--line));margin:0 6px 6px 0}
 .card.stacked.s3{box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 color-mix(in srgb,var(--accent) 35%,var(--line)),12px 12px 0 -1px var(--surface-2),12px 12px 0 0 color-mix(in srgb,var(--accent) 25%,var(--line));margin:0 12px 12px 0}
 .card.stacked:hover{box-shadow:6px 6px 0 -1px var(--surface-2),6px 6px 0 0 var(--accent),12px 12px 0 -1px var(--surface-2),12px 12px 0 0 color-mix(in srgb,var(--accent) 50%,var(--line))}
@@ -1469,10 +1482,18 @@ function renderChips(){
   const cats=[["all","All"],...Object.entries(CATS)];
   const plats=[["all","All sources"],["own","Our recipes"],["extra","New ideas"],["ig","Instagram"],["dy","Douyin 抖音"]];
   if(RECIPES.some(r=>r.plat==="ai"))plats.splice(2,0,["ai","Saved by Claude"]);
-  $("#chips").innerHTML=plats.map(([k,v])=>`<button class="chip" data-plat="${k}" aria-pressed="${filter.plat===k}">${v}</button>`).join("")+`<span style="width:10px"></span>`
-   +cats.map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${filter.cat===k}">${v}</button>`).join("")
-   +`<span style="width:10px"></span>`+TAGS.map(t=>`<button class="chip" data-tag="${t}" aria-pressed="${filter.tag===t}">${t}</button>`).join("");
+  // folded away by default; the summary line shows what's active
+  const on=[filter.plat!=="all"&&(plats.find(x=>x[0]===filter.plat)||[])[1],filter.cat!=="all"&&CATS[filter.cat],filter.tag].filter(Boolean);
+  $("#chips").innerHTML=`<details class="filters"${FILT_OPEN?" open":""}><summary><span class="ftitle">Filters</span>${on.length?on.map(t=>`<span class="fon">${esc(t)}</span>`).join(""):`<span class="fnone">none · showing everything</span>`}<span class="fcaret" aria-hidden="true"></span></summary>
+    <div class="fbody">
+      <div class="frow"><span class="flabel">Source</span><div class="chips">${plats.map(([k,v])=>`<button class="chip" data-plat="${k}" aria-pressed="${filter.plat===k}">${v}</button>`).join("")}</div></div>
+      <div class="frow"><span class="flabel">Type</span><div class="chips">${cats.map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${filter.cat===k}">${v}</button>`).join("")}</div></div>
+      <div class="frow"><span class="flabel">Style</span><div class="chips">${TAGS.map(t=>`<button class="chip" data-tag="${t}" aria-pressed="${filter.tag===t}">${t}</button>`).join("")}</div></div>
+      ${on.length?`<button class="ib" data-fclear>Clear filters</button>`:""}
+    </div></details>`;
 }
+let FILT_OPEN=false;
+document.addEventListener("toggle",e=>{if(e.target.classList&&e.target.classList.contains("filters"))FILT_OPEN=e.target.open},true);
 function matches(r){
   if(isHidden(r))return false;
   if(filter.cat!=="all"&&r.cat!==filter.cat)return false;
@@ -2405,6 +2426,7 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
   if(t.id==="pminus"||t.id==="pplus"){const np=Math.max(1,Math.min(12,S.people+(t.id==="pplus"?1:-1)));if(np!==S.people){const old=S.people;S.people=np;
     for(const[k]of DAYS)for(const m of["l","d"]){const s=S.week[k][m];if(s&&s.r&&s.p===old)s.p=np}
     S.prep.forEach(b=>{if(b.p%old===0)b.p=b.p/old*np});commit();toast(`Cooking for ${np}. Portions and the list are updated.`)}return}
+  if(d.fclear!==undefined){filter.plat="all";filter.cat="all";filter.tag=null;renderChips();renderBook();return}
   if(d.cat){filter.cat=d.cat;renderChips();renderBook();return}
   if(d.plat){filter.plat=d.plat;renderChips();renderBook();return}
   if(d.tag){filter.tag=filter.tag===d.tag?null:d.tag;renderChips();renderBook();return}
