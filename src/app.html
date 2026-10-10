@@ -47,7 +47,7 @@ h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:
 .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;color:var(--ink-3)}
 
 /* header */
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);margin-inline:-16px;padding:12px 16px 0;border-bottom:1px solid var(--line)}
+header.top{position:sticky;top:0;z-index:20;background:var(--bg);margin-inline:-16px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 0;border-bottom:1px solid var(--line)}
 .brandrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand h1{font-size:26px;font-weight:800}
