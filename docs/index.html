@@ -475,8 +475,10 @@ body{background:radial-gradient(circle at 66% 12%,var(--wash),transparent 58%) f
 *,*::before,*::after{border-radius:0 !important}
 .dot,.sdot,.kdot,.readout-dot{border-radius:50% !important}
 h1,h2,h3,h4{font-weight:400 !important;letter-spacing:-.035em}
-.brand h1{letter-spacing:-.05em;text-shadow:-2px 1px 0 color-mix(in srgb,var(--pink) 32%,transparent),2px -1px 0 color-mix(in srgb,var(--cyan) 30%,transparent)}
-.brand h1 span{color:var(--cyan)}
+.brand h1{letter-spacing:-.05em;color:var(--ink);text-shadow:-3px 2px 0 color-mix(in srgb,var(--pink) 26%,transparent),3px -2px 0 color-mix(in srgb,var(--cyan) 24%,transparent)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brand h1{text-shadow:-3px 2px 0 color-mix(in srgb,var(--pink) 46%,transparent),3px -2px 0 color-mix(in srgb,var(--cyan) 40%,transparent)}}
+:root[data-theme="dark"] .brand h1{text-shadow:-3px 2px 0 color-mix(in srgb,var(--pink) 46%,transparent),3px -2px 0 color-mix(in srgb,var(--cyan) 40%,transparent)}
+
 .eyebrow,.chip,.btn,.ib,.tag,.tchip,nav.tabs [role=tab],.seg button,.seg.ppl span,.forlabel,.sync,.pin,.stackbadge,.v,.count,.plat,.time,.swatch .pro,.facts span,.stepno,.lbl{font-family:var(--f-mono) !important;letter-spacing:.12em;text-transform:uppercase}
 .btn,.ib,.chip,.tchip,.tag,.seg button,nav.tabs [role=tab]{font-size:11px !important;font-weight:500}
 .eyebrow{color:var(--cyan);letter-spacing:.2em}
@@ -519,7 +521,7 @@ nav.tabs .count{color:var(--mint);background:transparent;border:1px solid var(--
 .selchip.must{background:color-mix(in srgb,var(--pink) 9%,transparent);border-color:var(--pink)}
 .selchip.must .selname,.selchip.must button{color:var(--pink)}
 .qbtn.on{background:var(--pink);color:#fff}
-.brand h1 span{color:var(--mint)}
+.brand h1 span{color:inherit}
 .tonight .t1 b,.tonight .t1{color:var(--mint)}
 .match b{color:var(--pink)}
 .card:hover{border-color:var(--pink)}
