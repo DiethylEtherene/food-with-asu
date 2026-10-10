@@ -533,6 +533,22 @@ a:hover{color:var(--pink)}
 b,strong{font-weight:700 !important}
 input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
 
+/* recipe cards: the site's soft panel glow (its .slot / .pl.model), toned down; stacks get offset layers */
+:root{--glow:0 0 16px rgba(13,126,166,.10),inset 0 0 22px rgba(13,126,166,.04)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--glow:0 0 24px rgba(82,220,255,.14),inset 0 0 32px rgba(82,220,255,.07)}}
+:root[data-theme="dark"]{--glow:0 0 24px rgba(82,220,255,.14),inset 0 0 32px rgba(82,220,255,.07)}
+.card{border-color:color-mix(in srgb,var(--cyan) 38%,var(--line));box-shadow:var(--glow)}
+.card:hover{box-shadow:var(--glow),0 0 0 1px var(--pink)}
+.card.stacked{margin:0 10px 10px 0;box-shadow:
+  10px 10px 0 -1px var(--surface),10px 10px 0 0 color-mix(in srgb,var(--pink) 75%,transparent),var(--glow)}
+.card.stacked.s3{margin:0 18px 18px 0;box-shadow:
+  9px 9px 0 -1px var(--surface),9px 9px 0 0 color-mix(in srgb,var(--pink) 75%,transparent),
+  18px 18px 0 -1px var(--surface),18px 18px 0 0 color-mix(in srgb,var(--cyan) 60%,transparent),var(--glow)}
+.card.stacked:hover{box-shadow:10px 10px 0 -1px var(--surface),10px 10px 0 0 var(--pink),var(--glow),0 0 0 1px var(--pink)}
+.card.stacked.s3:hover{box-shadow:9px 9px 0 -1px var(--surface),9px 9px 0 0 var(--pink),18px 18px 0 -1px var(--surface),18px 18px 0 0 var(--cyan),var(--glow),0 0 0 1px var(--pink)}
+.card.stacked .stackinfo{border-top:1px dashed color-mix(in srgb,var(--pink) 50%,transparent);padding-top:6px}
+#plist .pkstack{box-shadow:6px 6px 0 -1px var(--surface),6px 6px 0 0 color-mix(in srgb,var(--pink) 75%,transparent);margin:0 6px 6px 0}
+
 .hdrr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbtn{margin-right:10px;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .kbtn .kdot{background:var(--accent-ink)}
