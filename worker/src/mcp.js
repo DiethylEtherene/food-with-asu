@@ -3,6 +3,7 @@
    custom connector in Claude. Tools read and write the same kitchen the web app syncs with. */
 import { freshState, emptyWeek } from "./shared.js";
 import { importPost } from "./importer.js";
+import { nutOf } from "./nutrition.js";
 
 const VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -18,7 +19,8 @@ const INSTRUCTIONS = `This is the user's shared kitchen in the "Food with Asu" c
 - To find dishes, use search_recipes before inventing new ones; recipe ids come from there.
 - When you write a new recipe (on request, or from what's in the fridge), use UK supermarket ingredients, metric amounts, and put any time in the step text (e.g. "simmer 10 min") with timer_minutes so the app makes a timer. Save it with save_recipe only if the user wants it kept.
 - Prefer ingredients in their pantry; if suggesting from what they have, need at most 1-2 things to buy.
-- Planner: set_meals fills lunch/dinner slots. Don't overwrite locked slots unless asked.`;
+- Planner: set_meals fills lunch/dinner slots. Don't overwrite locked slots unless asked.
+- Nutrition: search_recipes can filter by protein, fibre, calories and salt per portion; get_week_plan shows each day's per-person totals for lunch + dinner against targets. Use these when asked to plan healthily.`;
 
 const TOOLS = [
   { name: "kitchen_overview", title: "Kitchen overview", description: "Summary of the kitchen: how many people, today's day, this week's planned meals, pantry status, and recipe counts. Call this first.",
@@ -30,6 +32,9 @@ const TOOLS = [
       protein: { type: "string", enum: PROS },
       category: { type: "string", enum: CATS },
       uses_ingredients: { type: "array", items: { type: "string" }, description: "Every one must appear in the recipe, e.g. ['prawns','cream']" },
+      min_protein_g: { type: "number", description: "Per portion, e.g. 30 for high protein" },
+      min_fibre_g: { type: "number", description: "Per portion, e.g. 8 for high fibre" },
+      max_kcal: { type: "number", description: "Per portion" }, max_salt_g: { type: "number", description: "Per portion" },
       limit: { type: "integer", minimum: 1, maximum: 50, default: 15 } } }, annotations: { readOnlyHint: true } },
   { name: "get_recipe", title: "Get a recipe", description: "Full recipe by id: ingredients (scaled to the given portions), steps with timers, tips, air-fryer method, meal-prep notes.",
     inputSchema: { type: "object", properties: { id: { type: "string" }, portions: { type: "integer", minimum: 1, maximum: 12 } }, required: ["id"] }, annotations: { readOnlyHint: true } },
@@ -135,6 +140,7 @@ function cleanRecipe(a, id) {
     savedOn: new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" }).format(new Date()) };
 }
 
+const nutBrief = r => { const v = nutOf(r).per; return { kcal: Math.round(v.kcal), protein_g: Math.round(v.protein), carbs_g: Math.round(v.carbs), fat_g: Math.round(v.fat), fibre_g: +v.fibre.toFixed(1), sugars_g: Math.round(v.sugars), salt_g: +v.salt.toFixed(1) }; };
 /* ---------- tools ---------- */
 const run = {
   async kitchen_overview(_, ctx) {
@@ -148,7 +154,12 @@ const run = {
     const { list } = await all(ctx);
     const words = String(a.query || "").toLowerCase().split(/\s+/).filter(Boolean);
     const must = (a.uses_ingredients || []).map(s => String(s).toLowerCase()).filter(Boolean);
+    const N = r => nutOf(r).per;
     const hits = list.filter(r => {
+      if (a.min_protein_g && N(r).protein < a.min_protein_g) return false;
+      if (a.min_fibre_g && N(r).fibre < a.min_fibre_g) return false;
+      if (a.max_kcal && N(r).kcal > a.max_kcal) return false;
+      if (a.max_salt_g && N(r).salt > a.max_salt_g) return false;
       if (a.max_minutes && r.time > a.max_minutes) return false;
       if (a.protein && r.pro !== a.protein) return false;
       if (a.category && r.cat !== a.category) return false;
@@ -158,14 +169,14 @@ const run = {
       const hay = [r.n, r.zh, r.by, ...(r.tags || []), ...ings].join(" ").toLowerCase();
       return words.every(w => hay.includes(w));
     }).slice(0, Math.min(50, a.limit || 15));
-    return { count: hits.length, recipes: hits.map(r => ({ id: r.id, name: r.n, chinese_name: r.zh || undefined, minutes: r.time, protein: r.pro, category: r.cat, serves: r.serves, tags: r.tags, source: srcOf(r), key_ingredients: keyIngs(r) })) };
+    return { count: hits.length, recipes: hits.map(r => ({ id: r.id, name: r.n, chinese_name: r.zh || undefined, minutes: r.time, protein: r.pro, category: r.cat, serves: r.serves, tags: r.tags, source: srcOf(r), key_ingredients: keyIngs(r), per_portion: nutBrief(r) })) };
   },
   async get_recipe(a, ctx) {
     const { byId, st } = await all(ctx);
     const r = byId[a.id]; if (!r) throw new Error(`No recipe with id ${a.id}. Use search_recipes to find ids.`);
     const p = a.portions || st.people || 2;
     return { id: r.id, name: r.n, chinese_name: r.zh || undefined, source: srcOf(r), category: r.cat, protein: r.pro, total_minutes: r.time, hands_on_minutes: r.active,
-      original_serves: r.serves, portions: r.fixed ? r.fixed : p, ingredients: scaled(r, p),
+      original_serves: r.serves, portions: r.fixed ? r.fixed : p, ingredients: scaled(r, p), nutrition_per_portion: { ...nutBrief(r), note: "Estimate from the ingredients (typical UK values)" },
       steps: r.steps.map((s, i) => `${i + 1}. ${s[0]}${s[1] ? ` [timer: ${s[2]} ${s[1]} min]` : ""}`), tip: r.note || undefined, air_fryer: r.af || undefined, meal_prep: r.mp || undefined, tags: r.tags };
   },
   async save_recipe(a, ctx) {
@@ -183,7 +194,13 @@ const run = {
   },
   async get_week_plan(_, ctx) {
     const { st, byId } = await all(ctx);
-    return { cooking_for: st.people || 2, week: weekOf(st, byId) };
+    const w = st.week || emptyWeek(), daily = {};
+    for (const d of DAYS) { const t = { kcal: 0, protein_g: 0, fibre_g: 0, salt_g: 0, meals_counted: 0 };
+      for (const k of ["l", "d"]) { const s = w[d] && w[d][k]; const r = s && s.r && byId[s.r]; if (!r) continue; const v = nutOf(r).per;
+        t.kcal += v.kcal; t.protein_g += v.protein; t.fibre_g += v.fibre; t.salt_g += v.salt; t.meals_counted++; }
+      daily[DAY_NAMES[d]] = { kcal: Math.round(t.kcal), protein_g: Math.round(t.protein_g), fibre_g: +t.fibre_g.toFixed(1), salt_g: +t.salt_g.toFixed(1), meals_counted: t.meals_counted }; }
+    return { cooking_for: st.people || 2, healthy_goal: st.goal || "none", week: weekOf(st, byId),
+      nutrition_per_person_lunch_and_dinner: daily, targets_for_two_meals: "1000-1700 kcal, ≥35 g protein, ≥12 g fibre, ≤4.2 g salt" };
   },
   async set_meals(a, ctx) {
     const { st, byId } = await all(ctx);

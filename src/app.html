@@ -536,6 +536,38 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
 .card.stacked.s3:hover{box-shadow:9px 9px 0 -1px var(--surface),9px 9px 0 0 var(--pink),18px 18px 0 -1px var(--surface),18px 18px 0 0 var(--cyan),var(--glow),0 0 0 1px var(--pink)}
 .card.stacked .stackinfo{border-top:1px dashed color-mix(in srgb,var(--pink) 50%,transparent);padding-top:6px}
 #plist .pkstack{box-shadow:6px 6px 0 -1px var(--surface),6px 6px 0 0 color-mix(in srgb,var(--pink) 75%,transparent);margin:0 6px 6px 0}
+
+/* nutrition */
+.nutline{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;color:var(--mint);text-transform:uppercase}
+.nutpanel{border:1px solid var(--line);background:var(--panel);margin:14px 0 4px;padding:0 12px}
+.nutpanel summary,.nutweek summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0}
+.nutpanel summary::-webkit-details-marker,.nutweek summary::-webkit-details-marker{display:none}
+.nsum{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;color:var(--ink)}
+.ngrid{display:grid;gap:6px;padding:4px 0 10px;border-top:1px solid var(--line)}
+.nrow{display:grid;grid-template-columns:72px 78px minmax(0,1fr) 42px;align-items:center;gap:8px;font-size:13px}
+.nrow .nl{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.nrow .nv{font-family:var(--f-mono);font-size:13px;color:var(--ink)}
+.nrow .nv small{font-size:10px;color:var(--ink-3);margin-left:3px}
+.nrow .nbar{height:4px;background:var(--line);position:relative;overflow:hidden}
+.nrow .nbar i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan)}
+.nrow .np{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);text-align:right}
+.nrow.lo .nbar i{background:var(--mint)}.nrow.mid .nbar i{background:#e0a800}.nrow.hi .nbar i{background:var(--pink)}
+.nrow.hi .nv{color:var(--pink)}
+.ntags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.ntag{border:1px solid var(--mint) !important;color:var(--mint) !important}
+.nutpanel .note{font-size:11.5px;margin:0 0 10px}
+.goalsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--btn);padding:0 4px 0 10px}
+.goalsel span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.goalsel select{border:0;background:transparent;color:var(--pink);font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 4px}
+.nutweek{border:1px solid var(--line);background:var(--panel);padding:0 12px;margin:0 0 14px;box-shadow:var(--glow)}
+.ntable{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:12px;margin:4px 0 8px}
+.ntable th,.ntable td{padding:6px 4px;text-align:right;border-top:1px solid var(--line)}
+.ntable thead th{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);border-top:0}
+.ntable tbody th{text-align:left;color:var(--ink);font-weight:400}
+.ntable td.ok{color:var(--ink)}.ntable td.low{color:#e0a800}.ntable td.high{color:var(--pink)}
+.ntable td.dv{color:var(--mint);width:24px}.ntable tr:has(td.low,td.high) td.dv{color:var(--pink)}
+.ntable tr.none td{text-align:left}
+.ntips{margin:4px 0 8px;padding-left:18px;font-size:13.5px;display:grid;gap:4px}
 </style>
 
 <div class="wrap">
@@ -572,6 +604,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
       <div class="planhead">
         <div><div class="eyebrow" id="weekof"></div><h2>This week</h2><div class="note">Everything here goes straight into the shopping list. Swap any meal, tap ↻ for another idea, or Lock the ones you want to keep before re-suggesting.</div><div class="note" id="weeksum"></div></div>
         <div class="btnrow">
+          <label class="goalsel"><span>Healthy goal</span><select id="goal" aria-label="Healthy goal for suggestions"><option value="">None</option><option value="protein">More protein</option><option value="fibre">More fibre</option><option value="lighter">Lighter</option><option value="lowsalt">Less salt</option><option value="balanced">Balanced</option></select></label>
           <button class="btn primary" id="suggest">Suggest a week</button>
           <button class="btn" id="fillgaps">Fill empty slots</button>
           <button class="btn ghost" id="undo">Undo</button>
@@ -581,6 +614,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pink)}
       <div id="clearconfirm"></div>
       <div class="prepbox" id="mpbox" style="margin:0 0 14px"></div>
       <label class="note" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:10px"><input type="checkbox" id="wlunch"> Plan weekday lunches too</label>
+      <div id="nutweek"></div>
       <div id="movebar"></div>
       <div class="week" id="week"></div>
     </section>
@@ -1246,7 +1280,7 @@ function pickFor(kind,ctx){
   if(GROUPS.length){const seen=new Set();pool=pool.filter(r=>{const G=GROUP_OF[r.id];if(!G)return true;if(seen.has(G.g))return false;seen.add(G.g);return true}).map(r=>{const G=GROUP_OF[r.id];if(!G)return r;const opts=G.v.map(x=>byId[x[0]]).filter(x=>fitsKind(x,kind)&&!isHidden(x));return opts[Math.floor(Math.random()*opts.length)]||r})}
   const score=r=>{let s=Math.random();const cu=cuisineOf(r);
     if(ctx.prev&&r.pro===ctx.prev.pro)s-=.6;if(ctx.prev&&cu===ctx.prev.cu)s-=.5;
-    if(cu==="chinese"||cu==="pasta"||r.tags.includes("rice bowl"))s+=.25;if(r.plat==="own"||r.plat==="ai")s+=.2;
+    if(cu==="chinese"||cu==="pasta"||r.tags.includes("rice bowl"))s+=.25;s+=goalBonus(r);if(r.plat==="own"||r.plat==="ai")s+=.2;
     if(kind==="friday"&&r.tags.some(t=>["fried","party","date night"].includes(t)))s+=.35;
     if(kind==="project"&&r.tags.some(t=>["weekend project","slow cook","date night"].includes(t)))s+=.3;return s};
   return pool.map(r=>[score(r),r]).sort((a,b)=>b[0]-a[0])[0]?.[1];
@@ -1349,11 +1383,12 @@ function renderChips(){
   const plats=[["all","All sources"],["own","Our recipes"],["extra","New ideas"],["ig","Instagram"],["dy","Douyin 抖音"]];
   if(RECIPES.some(r=>r.plat==="ai"))plats.splice(2,0,["ai","Saved from fridge"]);
   // folded away by default; the summary line shows what's active
-  const on=[filter.plat!=="all"&&(plats.find(x=>x[0]===filter.plat)||[])[1],filter.cat!=="all"&&CATS[filter.cat],filter.tag].filter(Boolean);
+  const on=[filter.plat!=="all"&&(plats.find(x=>x[0]===filter.plat)||[])[1],filter.cat!=="all"&&CATS[filter.cat],filter.tag,filter.nut].filter(Boolean);
   $("#chips").innerHTML=`<details class="filters"${FILT_OPEN?" open":""}><summary><span class="ftitle">Filters</span>${on.length?on.map(t=>`<span class="fon">${esc(t)}</span>`).join(""):`<span class="fnone">none · showing everything</span>`}<span class="fcaret" aria-hidden="true"></span></summary>
     <div class="fbody">
       <div class="frow"><span class="flabel">Source</span><div class="chips">${plats.map(([k,v])=>`<button class="chip" data-plat="${k}" aria-pressed="${filter.plat===k}">${v}</button>`).join("")}</div></div>
       <div class="frow"><span class="flabel">Type</span><div class="chips">${cats.map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${filter.cat===k}">${v}</button>`).join("")}</div></div>
+      <div class="frow"><span class="flabel">Nutrition · per portion</span><div class="chips">${NUT_FILTERS.map(([k,v])=>`<button class="chip" data-nutf="${k}" aria-pressed="${filter.nut===k}">${v}</button>`).join("")}</div></div>
       <div class="frow"><span class="flabel">Style</span><div class="chips">${TAGS.map(t=>`<button class="chip" data-tag="${t}" aria-pressed="${filter.tag===t}">${t}</button>`).join("")}</div></div>
       ${on.length?`<button class="ib" data-fclear>Clear filters</button>`:""}
     </div></details>`;
@@ -1365,6 +1400,7 @@ function matches(r){
   if(filter.cat!=="all"&&r.cat!==filter.cat)return false;
   if(filter.plat!=="all"&&r.plat!==filter.plat)return false;
   if(filter.tag&&!(r.tags.includes(filter.tag)||(filter.tag==="meal prep"&&r.prep)))return false;
+  if(filter.nut&&!nutOf(r).tags.includes(filter.nut))return false;
   const q=filter.q.trim().toLowerCase();if(!q)return true;
   const hay=[r.n,r.zh||"",r.by,...(r.vids||[]).map(v=>v[1]),r.cat,r.pro,...r.tags,...r.ing.map(i=>i[2])].join(" ").toLowerCase();
   return q.split(/\s+/).every(w=>hay.includes(w));
@@ -1380,7 +1416,7 @@ function card(r,stackable){
   return `<button class="card${stack?` stacked${vs.length>2?" s3":""}`:""}" ${stack?`data-stack="${esc(G.g)}" aria-label="${esc(r.n)}: ${vs.length} versions, choose one"`:`data-open="${r.id}"`}>
     ${stack?thumbHTML(r).replace('<div class="thumb','<div class="thumb').replace(/<\/div>$/,`<span class="stackbadge">⧉ ${vs.length} versions</span></div>`):thumbHTML(r)}${vt}
     <div class="swatch"><span class="pro"><i class="dot" style="background:${pc}"></i>${pn} · ${CATS[r.cat]}</span><span class="time">${fmtMin(r.time)}</span></div>
-    <h3>${esc(r.n)}</h3>${r.zh?`<div class="zh">${esc(r.zh)}</div>`:""}<div class="by"><span class="plat ${r.plat}">${PLAT_LABEL[r.plat]}</span> ${r.plat==="dy"?esc(r.by)+(r.vids.length>1?` +${r.vids.length-1} more`:""):r.plat==="own"?"our recipe":r.plat==="extra"?"new idea":r.plat==="ai"?"from the fridge":"@"+esc(r.by)} · ${r.fixed?esc(r.fixed):`serves ${r.serves}`}</div>
+    <h3>${esc(r.n)}</h3>${r.zh?`<div class="zh">${esc(r.zh)}</div>`:""}${(()=>{const v=nutOf(r).per;return `<div class="nutline">${Math.round(v.kcal)} kcal · ${Math.round(v.protein)} g protein · ${v.fibre.toFixed(1)} g fibre</div>`})()}<div class="by"><span class="plat ${r.plat}">${PLAT_LABEL[r.plat]}</span> ${r.plat==="dy"?esc(r.by)+(r.vids.length>1?` +${r.vids.length-1} more`:""):r.plat==="own"?"our recipe":r.plat==="extra"?"new idea":r.plat==="ai"?"from the fridge":"@"+esc(r.by)} · ${r.fixed?esc(r.fixed):`serves ${r.serves}`}</div>
     <div class="meta">${tg.join("")}</div></button>`;
 }
 function renderBook(){
@@ -1448,6 +1484,7 @@ function renderPlan(){
   renderMpBox();
   const n=countMeals();$("#c-plan").textContent=n||"";
   let empty=0,act=0;const cus=new Set();for(const[k]of DAYS)for(const m of["l","d"]){const s=S.week[k][m];if(!s)empty++;else if(s.r&&byId[s.r]&&!s.fromPrep){act+=byId[s.r].active;cus.add(cuisineOf(byId[s.r]))}}
+  const gs=$("#goal");if(gs)gs.value=S.goal||"";renderNutWeek();
   $("#weeksum").textContent=`${n} meals planned${empty?` · ${empty} empty`:""} · about ${fmtMin(act)} hands-on cooking · ${cus.size} different styles`;
 }
 const dayName=k=>k==="before"?"Sunday before":DAYS.find(d=>d[0]===k)[2];
@@ -1555,6 +1592,351 @@ function listText(){
   return out;
 }
 
+/* ============ NUTRITION ============
+   Estimates per portion from the ingredient list. Values are per 100 g (UK supermarket / CoFID-style
+   typical values, raw unless the name says cooked): [kcal, protein, carbs, fat, fibre, sugars, salt].
+   Spoons and counts become grams with t: "l" liquid/paste (tsp 5 g, tbsp 15 g), "p" powder/spice
+   (tsp 3 g, tbsp 8 g), "s" sugar-like (tsp 4 g, tbsp 12 g); e = grams for one item ("2 onions").
+   First matching pattern wins, so specific names come before general ones. */
+const NUTDB=[
+ // ---------- things that add nothing ----------
+ [/^(water|ice|boiling water)\b/,[0,0,0,0,0,0,0]],
+ [/bay lea|star anise|cinnamon stick|whole cloves|food colou?r|vanilla|osmanthus|^beef bones|kombu/,[0,0,0,0,0,0,0],{t:"p",e:0}],
+ // ---------- more ingredients you might cook with later ----------
+ [/oat milk|soy milk|soya milk|almond milk|rice milk|coconut drink/,[45,1,6,1.5,0.5,3,0.1],{t:"l"}],
+ [/cottage cheese/,[100,11,3.5,4.5,0,3,0.7],{t:"l"}],
+ [/paneer/,[320,19,3,26,0,3,0.1]],
+ [/goat.?s cheese|blue cheese|stilton|gorgonzola|manchego|comte|comté/,[380,21,0.5,32,0,0.5,1.8],{t:"p",e:30}],
+ [/quail egg/,[158,13,0.4,11,0,0.4,0.4],{e:10}],
+ [/turkey(?! mince)/,[110,24,0,1.5,0,0,0.2],{e:150}],
+ [/venison|bison|rabbit/,[120,23,0,2.5,0,0,0.15]],
+ [/mackerel|sardine|herring|trout|anchov/,[200,19,0,13,0,0,0.3],{e:100}],
+ [/tempeh/,[190,19,9,11,5,0,0]],
+ [/seitan|vital wheat/,[120,25,4,2,0.6,0,0.6]],
+ [/quorn|mycoprotein/,[95,14,3,2.5,6,0.6,0.3]],
+ [/quinoa/,[365,14,64,6,7,0,0],{e:60}],
+ [/couscous|bulgur/,[355,12,72,1.5,5,1,0],{e:60}],
+ [/oats|porridge|granola|muesli/,[375,11,60,8,9,1,0],{t:"p",e:40}],
+ [/wonton wrapper|dumpling wrapper|gyoza wrapper|spring roll (wrapper|pastry)|rice paper/,[290,9,58,1.5,2,1,0.8],{e:8}],
+ [/dumplings|gyoza|wontons|bao/,[220,9,28,8,2,2,1],{e:25}],
+ [/puff pastry|shortcrust|filo|pastry/,[400,6,40,24,2,2,0.9],{e:320}],
+ [/crackers|cream crackers|rice crackers/,[430,9,70,13,3,2,1.3],{e:8}],
+ [/olives/,[150,1,3,15,3,0,3],{e:4}],
+ [/capers/,[25,2.4,5,0.9,3.2,0.4,7]],
+ [/kimchi|sauerkraut/,[20,1.5,3,0.5,2,1.5,1.8]],
+ [/tahini/,[600,18,10,54,9,0.5,0.1],{t:"l"}],
+ [/hummus|houmous/,[300,7,11,25,6,1,0.9],{t:"l"}],
+ [/harissa|sambal|gochugaru paste|chilli paste|chili paste/,[120,3,12,6,5,6,6],{t:"l"}],
+ [/black bean sauce|sweet bean sauce|bean sauce|char siu sauce|xo sauce/,[180,6,30,4,3,20,7],{t:"l"}],
+ [/tamarind/,[240,3,62,0.6,5,57,0.1],{t:"l"}],
+ [/beetroot|beet/,[43,1.6,10,0.2,2.8,7,0.2],{e:100}],
+ [/radish|daikon|mooli|turnip/,[16,0.7,3.4,0.1,1.6,1.9,0],{e:300}],
+ [/fennel/,[31,1.2,7,0.2,3.1,3.9,0],{e:250}],
+ [/okra|artichoke/,[33,2,7,0.2,3.2,1.5,0]],
+ [/lotus root|bamboo shoot|water chestnut/,[50,1.5,11,0.1,3,1,0]],
+ [/^(kiwis?|peach(es)?|plums?|nectarines?|apricots?|cherries|melon|watermelon|lychees?|passion fruits?|figs?|dates?)$/,[50,0.8,12,0.3,2,10,0],{e:100}],
+ [/raisin|sultana|dried fruit|cranberr/,[300,2.5,75,0.5,4,65,0.1],{t:"p"}],
+ [/coconut water/,[19,0.7,3.7,0.2,1,2.6,0.1],{t:"l"}],
+ [/orange juice|apple juice|fruit juice/,[45,0.5,10,0.1,0.2,9,0],{t:"l"}],
+ [/gravy|stock pot|stock jelly/,[30,1,4,1,0,1,1.2],{t:"l"}],
+ [/custard/,[110,3,16,3.5,0,11,0.1],{t:"l"}],
+ [/ice cream|gelato/,[200,3.5,24,10,0,21,0.2],{t:"l"}],
+ // ---------- stocks, wines, vinegars ----------
+ [/chicken stock|beef stock|vegetable stock|stock cube|^stock$|broth|dashi stock/,[8,1,0.5,0.3,0,0.3,0.8],{t:"l",e:500}],
+ [/hondashi|dashi powder|chicken powder|bouillon powder/,[220,24,30,0.3,0,25,41],{t:"p"}],
+ [/shaoxing|rice wine|cooking sake|^sake/,[120,1.5,5,0,0,2,1.2],{t:"l"}],
+ [/mirin/,[230,0.3,43,0,0,43,0],{t:"l"}],
+ [/red wine|white wine(?! vinegar)|dry white wine|^wine/,[30,0,1,0,0,1,0],{t:"l"}],  // mostly cooked off
+ [/stout|beer|lager/,[25,0.3,3,0,0,0,0],{t:"l"}],
+ [/black vinegar|chinkiang/,[60,2,8,0,0,2,1.5],{t:"l"}],
+ [/vinegar/,[20,0,0.5,0,0,0.4,0],{t:"l"}],
+ [/^cola|coca|coke/,[42,0,10.6,0,0,10.6,0],{t:"l"}],
+ // ---------- sauces & pastes (salt matters) ----------
+ [/dark soy/,[110,4,18,0,0,15,12],{t:"l"}],
+ [/soy sauce|^soy$|tamari|light soy/,[55,8,5,0.1,0.8,0.4,14.5],{t:"l"}],
+ [/oyster sauce/,[110,2.3,23,0.3,0.3,18,11],{t:"l"}],
+ [/hoisin/,[220,3,45,3,2,35,4],{t:"l"}],
+ [/kecap manis|sweet soy/,[280,2,65,0,0,55,7],{t:"l"}],
+ [/fish sauce/,[35,5,3.6,0,0,3.6,23],{t:"l"}],
+ [/doubanjiang|chilli bean|broad bean paste/,[180,9,18,8,6,4,15],{t:"l"}],
+ [/gochujang/,[220,4,45,1.5,2,20,7],{t:"l"}],
+ [/ssamjang/,[200,7,30,5,3,15,9],{t:"l"}],
+ [/miso/,[200,12,26,6,5,6,12],{t:"l"}],
+ [/chilli crisp|crispy chilli|chili crisp/,[600,4,12,58,3,5,2.5],{t:"l"}],
+ [/chilli oil|chili oil|rayu/,[880,0.5,2,97,0.5,1,0.5],{t:"l",oil:1}],
+ [/yakiniku|teriyaki sauce|bbq sauce|barbecue sauce/,[160,2.5,35,0.2,0.2,30,8],{t:"l"}],
+ [/satay/,[600,10,15,55,4,6,4],{t:"l"}],
+ [/plum sauce/,[200,0.5,50,0,1,45,3],{t:"l"}],
+ [/curry paste/,[140,3,15,7,5,6,9],{t:"l"}],
+ [/curry roux|curry block/,[510,6,45,34,3,7,10],{t:"l",e:20}],
+ [/hot ?pot base/,[650,2,8,68,2,2,10],{t:"l"}],
+ [/pizza sauce|passata|tomato sauce|marinara/,[45,1.5,7,1,1.5,5,0.6],{t:"l"}],
+ [/sweet chilli/,[220,0.4,53,0.2,0.5,50,2.5],{t:"l"}],
+ [/sriracha|hot sauce|tabasco/,[100,2,19,1,2,15,5.6],{t:"l"}],
+ [/ketchup/,[112,1.2,26,0.1,0.5,23,1.8],{t:"l"}],
+ [/dijon|wholegrain mustard|english mustard/,[140,7,5,10,4,2,5.7],{t:"l"}],
+ [/mustard/,[60,3.5,5,3,2,2,2.8],{t:"l"}],
+ [/worcester/,[80,1,19,0,0,10,3.5],{t:"l"}],
+ [/pesto/,[450,5,5,45,2,2,2.5],{t:"l"}],
+ [/mayo/,[690,1.1,1.3,75,0,1.3,1.4],{t:"l"}],
+ [/ranch|caesar dressing|dressing/,[450,1,6,47,0,4,2],{t:"l",e:30}],
+ [/wasabi/,[200,2,30,8,3,15,3.5],{t:"l"}],
+ [/tomato pur|tomato paste/,[80,4.3,17,0.5,4,12,0.25],{t:"l"}],
+ [/refried beans/,[90,5,14,1,5,0.5,1],{t:"l"}],
+ [/ramen seasoning|soup sachet|seasoning sachet/,[250,8,35,7,1,5,45],{t:"p",e:12}],
+ [/fig jam|jam|marmalade/,[250,0.4,62,0,1,60,0],{t:"l",e:30}],
+ // ---------- oils & fats ----------
+ [/olive oil|vegetable oil|sunflower oil|rapeseed oil|coconut oil|sesame oil|groundnut oil|peanut oil|neutral oil|^oil$|cooking oil|frying oil/,[900,0,0,100,0,0,0],{t:"l",oil:1,e:14}],
+ [/ghee|lard|tallow|dripping|duck fat/,[900,0,0,100,0,0,0],{t:"l"}],
+ [/butter(?!milk|nut| beans|fly)/,[744,0.6,0.6,82,0,0.6,1.5],{t:"l",e:10}],
+ // ---------- dairy & eggs ----------
+ [/double cream|whipping cream|heavy cream|^cream$/,[445,1.7,1.7,48,0,1.7,0.06],{t:"l"}],
+ [/single cream/,[190,2.6,3.9,18,0,3.9,0.1],{t:"l"}],
+ [/soured cream|sour cream|creme fraiche|crème fraîche/,[190,2.8,3.5,18,0,3.5,0.1],{t:"l"}],
+ [/condensed milk/,[321,8,54,8,0,54,0.3],{t:"l",e:397}],
+ [/buttermilk/,[40,3.4,4.8,0.9,0,4.8,0.2],{t:"l"}],
+ [/milk/,[64,3.3,4.7,3.6,0,4.7,0.1],{t:"l"}],
+ [/greek yog/,[130,5.7,3.2,10,0,3.2,0.1],{t:"l"}],
+ [/yog/,[70,5,7,2.5,0,7,0.2],{t:"l"}],
+ [/truffle cream cheese|cream cheese|soft cheese|boursin/,[250,5.4,4,24,0,3,0.8],{t:"l"}],
+ [/mascarpone/,[430,4.8,3.6,44,0,3.6,0.1],{t:"l"}],
+ [/ricotta/,[140,9.4,3,10,0,3,0.2],{t:"l"}],
+ [/parmesan|parmigiano|grana padano|pecorino/,[392,36,0,28,0,0,1.7],{t:"p",e:20}],
+ [/mozzarella/,[300,24,2,22,0,1,1.1],{t:"p",e:125}],
+ [/cheddar|grated cheese|^cheese|gruy|emmental|red leicester|monterey/,[416,25,0.1,35,0,0.1,1.8],{t:"p",e:30}],
+ [/feta|halloumi/,[270,15.6,1.5,22,0,1.5,2.5],{t:"p"}],
+ [/brie|camembert/,[340,20,0.5,29,0,0.5,1.6],{t:"p",e:250}],
+ [/salted egg yolk/,[380,16,1,32,0,0,3],{e:20}],
+ [/egg yolk/,[330,16,0.5,29,0,0.5,0.1],{e:17}],
+ [/egg white/,[48,11,0.8,0.2,0,0.8,0.4],{e:33}],
+ [/^(free[- ]range |large |medium )?eggs?$|^eggs?\b/,[131,12.6,0.2,9,0,0.2,0.4],{e:50}],
+ // ---------- meat & fish ----------
+ [/chicken thigh mince|chicken mince|turkey mince/,[150,18,0,8,0,0,0.2]],
+ [/chicken breast/,[106,24,0,1.1,0,0,0.15],{e:150}],
+ [/chicken wing/,[150,13,0,11,0,0,0.2],{e:45}],
+ [/chicken leg|drumstick|whole chicken/,[160,15,0,11,0,0,0.2],{e:250}],
+ [/chicken thigh|^chicken$|chicken pieces/,[135,19,0,6.5,0,0,0.2],{e:110}],
+ [/pork belly/,[300,17,0,26,0,0,0.15],{e:150}],
+ [/pork mince|sausage meat/,[220,18,0,16,0,0,0.2]],
+ [/sausage/,[260,13,6,20,0.5,1.5,1.6],{e:60}],
+ [/pork tenderloin|pork fillet/,[120,21,0,3.5,0,0,0.15]],
+ [/pork loin|pork chop|pork steak/,[180,20,0,11,0,0,0.15],{e:150}],
+ [/pork shoulder|pork collar|pork neck|^pork/,[220,18,0,16,0,0,0.15]],
+ [/chorizo/,[350,22,2,28,0,1,2.5]],
+ [/bacon|pancetta|lardons/,[270,16,0.5,23,0,0.5,2.8],{e:25}],
+ [/ham\b/,[115,19,1,4,0,1,2.2],{e:25}],
+ [/fatty beef|beef slices for hot ?pot|fat beef/,[300,14,0,27,0,0,0.15]],
+ [/thin-sliced beef|sliced beef|shaved beef/,[200,19,0,14,0,0,0.15]],
+ [/beef short ribs|bone-in short rib/,[230,14,0,19,0,0,0.15],{e:300}],
+ [/short rib|beef rib/,[290,18,0,24,0,0,0.15],{e:250}],
+ [/beef mince|minced beef|ground beef/,[190,19,0,12.5,0,0,0.2]],
+ [/steak|rump|sirloin|ribeye|flank|skirt|onglet/,[190,22,0,11,0,0,0.15],{e:225}],
+ [/beef chuck|beef shin|beef cheek|brisket|stewing beef|braising beef|^beef/,[180,20,0,11,0,0,0.15]],
+ [/lamb mince/,[230,17,0,18,0,0,0.2]],
+ [/lamb/,[230,18,0,17,0,0,0.2],{e:150}],
+ [/duck/,[200,19,0,13,0,0,0.2],{e:180}],
+ [/salmon/,[200,20,0,13,0,0,0.1],{e:120}],
+ [/cod|haddock|white fish|basa|pollock|sea bass|seabass|hake/,[80,18,0,0.7,0,0,0.3],{e:140}],
+ [/tuna/,[110,25,0,1,0,0,0.9],{e:110}],
+ [/shell-on .*prawn|shell-on prawn/,[50,11,0,0.5,0,0,0.4],{e:20}],
+ [/prawn|shrimp/,[70,16,0,0.6,0,0,0.6],{e:15}],
+ [/scallop/,[80,15,3,0.5,0,0,0.5],{e:25}],
+ [/crab/,[85,18,0,1,0,0,0.8]],
+ [/squid|calamari|octopus/,[80,15,1,1.2,0,0,0.5]],
+ [/mussel|clam/,[70,12,3,2,0,0,0.6]],
+ [/tofu/,[120,13,1,7,0.5,0.5,0]],
+ [/gelatine|gelatin/,[340,85,0,0,0,0,0.5],{e:1.7}],
+ // ---------- carbs ----------
+ [/instant ramen|ramen pack|instant noodle/,[460,9,61,20,2.5,2,6.2],{e:85}],
+ [/cooked (sushi )?rice|leftover rice|steamed rice/,[140,2.7,31,0.3,0.4,0,0],{e:180}],
+ [/rice noodle|flat rice noodle|ho fun|vermicelli|glass noodle|mung bean/,[170,1.7,38,0.3,0.8,0,0]],
+ [/rice cake|tteok/,[230,4,50,0.5,0.5,0,0.3]],
+ [/glutinous rice flour|rice flour/,[365,6,80,1,1,0,0],{t:"p"}],
+ [/^rice$|jasmine rice|basmati|long grain|sushi rice|short grain|risotto rice|arborio|pudding rice|rice \(|pasta or rice|rice or naan/,[350,7,78,0.6,1,0,0],{e:75}],
+ [/noodle portion|fresh noodle|udon|fresh ramen/,[150,5,29,1.5,1.5,0,0.2],{e:200}],
+ [/noodle|knife-cut/,[360,12,70,2,3,2,0.2],{e:70}],
+ [/lasagne sheet|lasagna sheet/,[355,12.5,71,1.8,3,3,0],{e:18}],
+ [/spaghetti|linguine|fettuccine|penne|rigatoni|tagliatelle|orzo|macaroni|fusilli|^pasta|conchiglie|paccheri/,[355,12.5,71,1.8,3,3,0],{e:90}],
+ [/naan/,[290,8,50,7,2,4,1.1],{e:120}],
+ [/corn tortilla/,[220,5.7,45,2.8,6,1,0.1],{e:25}],
+ [/tortilla|wrap/,[300,8,50,7,3,2,1.1],{e:62}],
+ [/baguette|crusty bread|sourdough|^bread|ciabatta|brioche|burger bun|bun\b|bread roll/,[270,9,55,1.5,2.5,2,1.2],{e:60}],
+ [/pizza dough/,[250,8,48,3,2,1,1.2]],
+ [/panko|breadcrumb/,[380,12,75,3,4,3,1.1],{t:"p"}],
+ [/cornflour|corn starch|cornstarch|potato starch|tapioca starch/,[355,0.4,88,0.1,0.9,0,0],{t:"p"}],
+ [/plain flour|self-raising flour|^flour|bread flour|00 flour/,[340,10,72,1.4,3,1,0],{t:"p"}],
+ [/sago|tapioca pearl|boba/,[350,0.2,87,0,0.5,0,0]],
+ [/sweet potato/,[86,1.6,20,0.1,3,4.2,0.1],{e:250}],
+ [/potato(?! starch)|potatoes/,[77,2,17,0.1,2.1,0.8,0],{e:200}],
+ // ---------- veg, herbs, fruit ----------
+ [/crispy onion|fried onion|fried shallot/,[600,6,40,45,5,10,1.3],{t:"p"}],
+ [/onion powder|onion granules|garlic powder|garlic granules/,[330,17,73,0.7,9,2,0.1],{t:"p"}],
+ [/ginger (&|and) garlic paste|garlic paste|ginger paste/,[100,3,20,1,2,2,1],{t:"l"}],
+ [/spring onion|scallion|green onion/,[32,1.8,7,0.2,2.6,2.3,0],{e:15}],
+ [/shallot/,[72,2.5,17,0.1,3.2,8,0],{e:30}],
+ [/onion/,[40,1.1,9,0.1,1.7,4.2,0],{e:150}],
+ [/garlic bulb/,[149,6.4,33,0.5,2.1,1,0],{e:50}],
+ [/garlic/,[149,6.4,33,0.5,2.1,1,0],{e:5}],
+ [/ground ginger/,[335,9,72,4,14,3,0.1],{t:"p"}],
+ [/ginger/,[80,1.8,18,0.8,2,1.7,0],{e:20}],
+ [/carrot/,[41,0.9,10,0.2,2.8,4.7,0.1],{e:80}],
+ [/celeriac/,[42,1.5,9,0.3,1.8,1.6,0.2],{e:600}],
+ [/celery/,[14,0.7,3,0.2,1.6,1.3,0.2],{e:40}],
+ [/leek/,[61,1.5,14,0.3,1.8,3.9,0],{e:200}],
+ [/(red|green|yellow|orange|bell|romano) peppers?$|^peppers?$|^red pepper|^green pepper/,[31,1,6,0.3,2.1,4.2,0],{e:160}],
+ [/dried red chilli|dried chilli/,[300,12,50,14,27,10,0.1],{e:0.5}],
+ [/jalape|green chilli|red chilli|bird.?s.?eye|fresh chilli|^chillies?$|chilli pepper/,[40,2,9,0.4,1.5,5,0],{e:15}],
+ [/ancho|guajillo|pasilla|chipotle|arbol/,[300,12,50,8,25,10,0.1],{e:8}],
+ [/sun-dried tomato|sundried tomato/,[210,5,23,14,5.8,13,2]],
+ [/chopped tomatoes|tinned tomatoes|canned tomatoes|plum tomatoes/,[22,1.1,3.8,0.2,1,3.3,0.05],{e:400}],
+ [/tomato/,[18,0.9,3.9,0.2,1.2,2.6,0],{e:100}],
+ [/enoki/,[37,2.7,7.8,0.3,2.7,0.2,0]],
+ [/mushroom/,[22,3.1,3.3,0.3,1,2,0],{e:20}],
+ [/spinach/,[23,2.9,3.6,0.4,2.2,0.4,0.2]],
+ [/pak choi|bok choy|choy sum|gai lan/,[13,1.5,2.2,0.2,1,1.2,0.1],{e:100}],
+ [/cabbage|chinese leaf|napa|kale|cavolo/,[25,1.3,5.8,0.1,2.5,3.2,0],{e:700}],
+ [/broccoli|tenderstem/,[34,2.8,7,0.4,2.6,1.7,0],{e:350}],
+ [/cauliflower/,[25,1.9,5,0.3,2,1.9,0],{e:500}],
+ [/asparagus/,[20,2.2,3.9,0.1,2.1,1.9,0],{e:20}],
+ [/bean sprout|beansprout/,[30,3,6,0.2,1.8,4,0]],
+ [/frozen peas|^peas|petit pois|edamame/,[66,5.4,9.5,0.9,5.1,4,0],{t:"p"}],
+ [/sweetcorn|corn on the cob|^corn$/,[86,3.3,19,1.4,2.7,4.5,0.3]],
+ [/butternut|squash|pumpkin/,[45,1,12,0.1,2,2.2,0],{e:800}],
+ [/courgette|zucchini|aubergine|eggplant/,[20,1.2,3,0.3,1.5,2.5,0],{e:250}],
+ [/green beans|fine beans|runner beans|mangetout|sugar snap/,[31,1.8,7,0.2,3.4,3.3,0]],
+ [/chickpea|kidney bean|black bean|cannellini|butter beans|lentil|beans$/,[120,7.5,16,1.5,6,1,0.3],{e:240}],
+ [/cucumber/,[15,0.7,3.6,0.1,0.5,1.7,0],{e:300}],
+ [/iceberg|little gem|lettuce|rocket|salad leaves|watercress/,[14,0.9,2.9,0.1,1.2,1.8,0],{e:150}],
+ [/avocado/,[160,2,8.5,15,6.7,0.7,0],{e:150}],
+ [/gherkin|pickle/,[15,0.5,3,0.2,1,1.5,2],{e:30}],
+ [/pickled jalape/,[25,1,4,0.4,2.5,2,2.5]],
+ [/parsley|coriander(?! seed)|cilantro|basil|mint|dill|chives|tarragon|thai basil|perilla|shiso/,[30,3,5,0.7,3,0.8,0],{e:10,bunch:25}],
+ [/rosemary|thyme|sage|oregano leaves/,[100,3,20,4,14,0,0],{e:1}],
+ [/lemon juice|lime juice/,[22,0.4,7,0.2,0.3,2.5,0],{t:"l"}],
+ [/lemon pepper/,[150,5,25,3,10,2,30],{t:"p"}],
+ [/lemon/,[29,1.1,9,0.3,2.8,2.5,0],{e:40}],
+ [/lime/,[30,0.7,10,0.2,2.8,1.7,0],{e:30}],
+ [/mango/,[60,0.8,15,0.4,1.6,14,0],{e:200}],
+ [/freeze-dried/,[350,6,80,2,20,60,0]],
+ [/strawberr|raspberr|blueberr|berries/,[32,0.7,7.7,0.3,2,4.9,0],{e:12}],
+ [/grape/,[69,0.7,18,0.2,0.9,16,0]],
+ [/pineapple/,[50,0.5,13,0.1,1.4,10,0]],
+ [/papaya/,[43,0.5,11,0.3,1.7,7.8,0],{e:300}],
+ [/mandarin|clementine|satsuma|orange/,[53,0.8,13,0.3,1.8,10.6,0],{e:70}],
+ [/pomelo|grapefruit/,[38,0.8,9.6,0,1,8,0],{e:600}],
+ [/apple|pear/,[52,0.3,14,0.2,2.4,10,0],{e:150}],
+ [/banana/,[89,1.1,23,0.3,2.6,12,0],{e:120}],
+ [/nori|seaweed|laver/,[270,41,5,2,30,0,1.5],{e:3}],
+ // ---------- nuts, seeds, sweet things ----------
+ [/peanut butter/,[600,25,13,50,6,6,0.9],{t:"l"}],
+ [/peanut/,[590,26,16,50,8,4,0],{e:30}],
+ [/hazelnut|almond|cashew|walnut|pecan|pistachio|^nuts/,[620,18,15,55,9,4,0],{e:30}],
+ [/sesame seed|sesame$|seeds/,[590,18,1,58,8,0.5,0],{t:"p",e:3}],
+ [/desiccated coconut|coconut flakes/,[660,7,24,62,16,7,0],{t:"p"}],
+ [/coconut milk|coconut cream/,[170,1.4,2.8,17,0,2,0.03],{t:"l",e:400}],
+ [/nutella|chocolate spread/,[540,6,57,31,3.4,56,0.1],{t:"l"}],
+ [/oreo|biscuit|digestive/,[470,4.5,69,20,2.5,38,0.8],{e:11}],
+ [/cocoa/,[350,20,12,21,30,1,0.1],{t:"p"}],
+ [/white chocolate/,[560,6,58,34,0,58,0.2],{e:10}],
+ [/chocolate chip/,[500,5,60,28,6,52,0.1],{e:1}],
+ [/chocolate/,[550,7,45,40,10,30,0],{e:10}],
+ [/crisps|tortilla chips|doritos/,[530,6.5,53,32,4,0.5,1.3],{e:25}],
+ [/matcha|instant coffee|espresso powder/,[300,25,40,5,35,0,0.1],{t:"p"}],
+ [/honey|maple|golden syrup|agave|syrup/,[304,0.3,82,0,0,82,0],{t:"l"}],
+ [/sugar|caster|demerara|muscovado|jaggery|icing/,[395,0,99,0,0,99,0],{t:"s"}],
+ // ---------- salt & spices ----------
+ [/bicarbonate|baking soda/,[0,0,0,0,0,0,68],{t:"p"}],
+ [/baking powder/,[50,0,12,0,0,0,25],{t:"p"}],
+ [/salt & (black )?pepper|salt and pepper|^salt|sea salt|flaky/,[0,0,0,0,0,0,100],{t:"p",e:0.5}],
+ [/cajun|fajita seasoning|taco seasoning|jerk seasoning|bbq rub/,[250,8,40,6,15,8,20],{t:"p"}],
+ [/italian seasoning|mixed herbs|dried (basil|oregano|thyme|parsley|mint)|herbes/,[270,10,50,5,30,3,0.1],{t:"p",e:1}],
+ [/pepper|paprika|chilli powder|chilli flakes|chili flakes|cayenne|cumin|coriander|turmeric|cinnamon|five spice|garam masala|curry powder|nutmeg|cardamom|cloves|allspice|fenugreek|gochugaru|sichuan|kashmiri|spice/,[300,12,50,10,30,3,0.1],{t:"p",e:1}],
+];
+const NUT_RI={kcal:2000,protein:50,carbs:260,fat:70,fibre:30,sugars:90,salt:6};
+const NUT_KEYS=["kcal","protein","carbs","fat","fibre","sugars","salt"];
+const NUT_AISLE={veg:[[30,1.5,6,0.3,2,3,0],{e:100}],meat:[[200,20,0,13,0,0,0.3],{e:150}],fish:[[110,19,0,3.5,0,0,0.4],{e:120}],
+  dairy:[[300,15,3,25,0,3,1],{t:"l",e:30}],bakery:[[270,9,50,4,3,4,1.2],{e:60}],frozen:[[110,5,15,3,3,3,0.5],{e:100}],
+  world:[[150,4,25,3,1,15,8],{t:"l",e:20}],cupboard:[[250,6,40,6,4,12,1],{t:"l",e:50}],spice:[[300,12,50,10,30,3,0.1],{t:"p",e:1}],
+  staple:[[300,6,60,3,3,5,0.5],{t:"p",e:50}],drink:[[40,0,10,0,0,10,0],{t:"l"}]};
+function nutEntry(name,aisle){const n=String(name).toLowerCase().replace(/\(.*?\)/g,"").trim();for(const e of NUTDB)if(e[0].test(n))return e;
+  const a=NUT_AISLE[aisle];return a?[null,a[0],a[1],true]:null}
+function nutGrams(q,u,e){const o=e[2]||{},t=o.t;
+  switch(u){case"g":return q;case"kg":return q*1000;case"ml":return q*(o.oil?0.92:1);case"l":return q*1000*(o.oil?0.92:1);
+    case"tsp":return q*(t==="p"?3:t==="s"?4:5);case"tbsp":return q*(t==="p"?8:t==="s"?12:15);
+    case"clove":return q*5;case"cm":return q*5;case"bunch":return q*(o.bunch||30);case"sprig":return q*1;
+    default:return q*(o.e!=null?o.e:(t?1:100))}}
+const NUT_CACHE=new Map();
+// per portion; also lists ingredients it couldn't price in
+function nutOf(r){
+  const key=r.id+"|"+r.ing.length+"|"+r.serves;if(NUT_CACHE.has(key))return NUT_CACHE.get(key);
+  const tot=Object.fromEntries(NUT_KEYS.map(k=>[k,0]));const unknown=[],guessed=[];let oilG=0,foodG=0;
+  for(const i of r.ing){if(i[0]==="—"||typeof i[0]!=="number")continue;
+    const e=nutEntry(i[2],i[3]);if(!e){unknown.push(i[2]);continue}
+    if(e[3])guessed.push(i[2]);
+    let g=nutGrams(i[0],i[1],e);
+    if(e[2]&&e[2].oil){oilG+=g;continue}
+    const v=e[1];NUT_KEYS.forEach((k,j)=>tot[k]+=v[j]*g/100);if(!(e[2]&&e[2].t==="l"))foodG+=g}
+  // deep-frying: only what the food soaks up counts (about 10% of a big pan of oil)
+  if(oilG>150)oilG=Math.min(oilG,Math.max(30,foodG*0.08));
+  tot.kcal+=9*oilG;tot.fat+=oilG;
+  const n=Math.max(1,r.fixed?(r.serves||1):r.serves);
+  const per=Object.fromEntries(NUT_KEYS.map(k=>[k,tot[k]/n]));
+  const tags=[];
+  if(per.protein>=30)tags.push("high protein");if(per.fibre>=8)tags.push("high fibre");
+  if(per.kcal<=550&&r.cat==="main")tags.push("lighter");if(per.salt<=1.5)tags.push("lower salt");if(per.fat<=20)tags.push("lower fat");
+  const res={per,unknown,guessed,tags};NUT_CACHE.set(key,res);return res;
+}
+// FSA "per portion" traffic lights: red above 30% of the reference intake, green at or below ~10%
+function nutLight(k,v){const red={fat:21,sugars:27,salt:1.8}[k],green={fat:7,sugars:9,salt:0.6}[k];if(red==null)return"";return v>red?"hi":v<=green?"lo":"mid"}
+
+function nutFmt(k,v){return k==="kcal"?String(Math.round(v)):v<10?v.toFixed(1):String(Math.round(v))}
+function nutPanel(r){const x=nutOf(r),v=x.per;
+  const row=(k,label,unit)=>{const pct=Math.round(v[k]/NUT_RI[k]*100),light=nutLight(k,v[k]);
+    return `<div class="nrow${light?" "+light:""}"><span class="nl">${label}</span><span class="nv">${nutFmt(k,v[k])}<small>${unit}</small></span><span class="nbar"><i style="width:${Math.min(100,pct)}%"></i></span><span class="np">${pct}%</span></div>`};
+  return `<details class="nutpanel" open><summary><span class="eyebrow">Nutrition · per portion</span><span class="nsum">${Math.round(v.kcal)} kcal · ${Math.round(v.protein)} g protein · ${v.fibre.toFixed(1)} g fibre</span></summary>
+   <div class="ngrid">${row("kcal","Energy","kcal")}${row("protein","Protein","g")}${row("carbs","Carbs","g")}${row("fat","Fat","g")}${row("fibre","Fibre","g")}${row("sugars","Sugars","g")}${row("salt","Salt","g")}</div>
+   ${x.tags.length?`<div class="ntags">${x.tags.map(t=>`<span class="tag ntag">${esc(t)}</span>`).join("")}</div>`:""}
+   <p class="note">An estimate worked out from the ingredients using typical UK values. % is of an adult's daily reference intake. Colours on fat, sugars and salt follow the UK front-of-pack rules for one portion.${x.guessed.length?` Rough guess for: ${esc(x.guessed.join(", "))}.`:""}${x.unknown.length?` Not counted: ${esc(x.unknown.join(", "))}.`:""}</p></details>`}
+const NUT_FILTERS=[["high protein","High protein"],["high fibre","High fibre"],["lighter","Lighter · ≤550 kcal"],["lower salt","Lower salt"],["lower fat","Lower fat"]];
+const GOALS={"":"No goal",protein:"More protein",fibre:"More fibre",lighter:"Lighter",lowsalt:"Less salt",balanced:"Balanced"};
+function goalBonus(r){const g=S.goal;if(!g)return 0;const v=nutOf(r).per;
+  if(g==="protein")return Math.min(1,v.protein/45)*1.6-0.6;
+  if(g==="fibre")return Math.min(1,v.fibre/8)*1.6-0.6;
+  if(g==="lighter")return v.kcal<=600?0.9:v.kcal<=800?0.2:-0.8;
+  if(g==="lowsalt")return v.salt<=1.8?0.8:v.salt<=3?0:-0.9;
+  return (v.protein>=25?0.3:0)+(v.fibre>=5?0.3:-0.2)+(v.salt<=2.5?0.3:-0.3)+(v.kcal>=450&&v.kcal<=850?0.3:-0.2)}
+/* this week, per person: lunch + dinner only (one portion each); breakfast and snacks aren't planned here */
+const MEAL_T={kcalLo:500,kcalHi:850,protein:17.5,fibre:6,salt:2.1};
+function dayNut(k){const out={kcal:0,protein:0,fibre:0,salt:0,meals:0,unknown:0,names:[]};
+  for(const m of["l","d"]){const s=S.week[k][m];if(!s)continue;
+    const r=s.ramen?RAMEN_R:(s.r&&byId[s.r]);if(!r){if(s.left||s.out)out.unknown++;continue}
+    const v=nutOf(r).per;out.kcal+=v.kcal;out.protein+=v.protein;out.fibre+=v.fibre;out.salt+=v.salt;out.meals++;out.names.push(r.n)}
+  return out}
+function nutStatus(d){const n=d.meals;if(!n)return null;
+  return{kcal:d.kcal<MEAL_T.kcalLo*n*0.85?"low":d.kcal>MEAL_T.kcalHi*n*1.1?"high":"ok",protein:d.protein<MEAL_T.protein*n?"low":"ok",
+    fibre:d.fibre<MEAL_T.fibre*n?"low":"ok",salt:d.salt>MEAL_T.salt*n?"high":"ok"}}
+function renderNutWeek(){const el=$("#nutweek");if(!el)return;
+  const rows=[],issues={kcal:[],protein:[],fibre:[],salt:[]};let planned=0,good=0;
+  for(const[k,short]of DAYS){const d=dayNut(k),st=nutStatus(d);if(!st){rows.push(`<tr class="none"><th>${short}</th><td colspan="5" class="note">${d.unknown?"leftovers / eating out":"nothing planned"}</td></tr>`);continue}
+    planned++;const bad=Object.entries(st).filter(([,v])=>v!=="ok");if(!bad.length)good++;
+    for(const[m,v]of bad)issues[m].push(short+(m==="salt"?` (${d.salt.toFixed(1)} g)`:""));
+    const cell=(m,txt)=>`<td class="${st[m]}">${txt}</td>`;
+    rows.push(`<tr><th>${short}</th>${cell("kcal",Math.round(d.kcal))}${cell("protein",Math.round(d.protein)+" g")}${cell("fibre",d.fibre.toFixed(1)+" g")}${cell("salt",d.salt.toFixed(1)+" g")}<td class="dv">${bad.length?"!":"✓"}</td></tr>`)}
+  if(!planned){el.innerHTML="";return}
+  const tips=[];
+  if(issues.fibre.length)tips.push(`<li><b>Fibre</b> is low on ${issues.fibre.join(", ")}. Add a veg side (e.g. garlic greens) or pick a high-fibre meal.</li>`);
+  if(issues.protein.length)tips.push(`<li><b>Protein</b> is low on ${issues.protein.join(", ")}.</li>`);
+  if(issues.salt.length)tips.push(`<li><b>Salt</b> is high on ${issues.salt.join(", ")}. Go easy on soy, stock and sauces those days.</li>`);
+  if(issues.kcal.length)tips.push(`<li><b>Calories</b> are off target on ${issues.kcal.join(", ")}.</li>`);
+  const worst=Object.entries(issues).sort((a,b)=>b[1].length-a[1].length)[0];
+  const goalFor={fibre:"fibre",protein:"protein",salt:"lowsalt",kcal:"balanced"}[worst[0]];
+  el.innerHTML=`<details class="nutweek"${NUTW_OPEN?" open":""}><summary><span class="eyebrow">Eating healthy?</span><span class="nsum"><b>${good} of ${planned}</b> planned days on track</span></summary>
+    <table class="ntable"><thead><tr><th></th><th>kcal</th><th>protein</th><th>fibre</th><th>salt</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table>
+    ${tips.length?`<ul class="ntips">${tips.join("")}</ul>${worst[1].length>=2&&S.goal!==goalFor?`<button class="ib" data-setgoal="${goalFor}">Lean suggestions towards ${esc(GOALS[goalFor].toLowerCase())}</button>`:""}`:`<p class="note">Every planned day looks balanced. Nice.</p>`}
+    <p class="note">Per person, lunch and dinner only (one portion each), so breakfast and snacks aren't included. Targets for the two meals: ${MEAL_T.kcalLo*2}–${MEAL_T.kcalHi*2} kcal, at least ${MEAL_T.protein*2} g protein and ${MEAL_T.fibre*2} g fibre, and no more than ${(MEAL_T.salt*2).toFixed(1)} g salt. Calories, protein and salt are about 70% of the adult daily reference; fibre is set lower because breakfast, fruit and snacks usually bring a good share of the 30 g a day.</p></details>`}
+let NUTW_OPEN=true;
+document.addEventListener("toggle",e=>{if(e.target.classList&&e.target.classList.contains("nutweek"))NUTW_OPEN=e.target.open},true);
+
 /* ============ RECIPE SHEET ============ */
 function openStack(g){
   const G=GROUPS.find(x=>x.g===g);if(!G)return;const vs=G.v.filter(([id])=>!isHidden(byId[id]));
@@ -1604,6 +1986,7 @@ function renderSheet(r){
    ${r.note?`<div class="callout">${esc(r.note)}</div>`:""}
    ${r.mp?`<div class="callout green"><b>Meal prep:</b> ${esc(r.mp)}</div>`:""}
    ${r.af?`<div class="callout af"><b>Air fryer:</b> ${timeLinks(r.af,"Air fryer · "+r.n.slice(0,20))}</div>`:""}
+   ${nutPanel(r)}
    <h4>Ingredients</h4>${SHEET_F&&SCALED_IDX!=null&&r.ing[SCALED_IDX]?`<div class="scalenote">Scaled to <b>${fmtQty(r.ing[SCALED_IDX][0]*SHEET_F,r.ing[SCALED_IDX][1])} ${esc(r.ing[SCALED_IDX][2])}</b> · about ${pe} portion${pe>1?"s":""}<button class="ib" data-scalereset>Reset</button></div>`:`<p class="note scalehint">Tip: tap any amount to scale the whole recipe to it, e.g. the 500 g of meat you've got.</p>`}<ul class="ing">${ings}</ul>
    <h4>Method</h4><ol class="steps">${steps}</ol>
    ${(()=>{if(!byId[r.id]||!RECIPES.includes(r))return"";
@@ -1620,8 +2003,8 @@ function renderSheet(r){
 
 /* ============ PICKER ============ */
 let pickTarget=null,pickFilter="all";
-const PF=[["all","All"],["quick","Under 30 min"],["rice","Rice"],["noodles","Noodles"],["pasta","Pasta"],["chinese","Chinese"],["prep","Meal prep"],["own","Ours"]];
-function pfMatch(r,f){switch(f){case"quick":return r.time<=30;case"rice":return r.tags.includes("rice bowl")||r.ing.some(i=>/(jasmine|long grain|cooked|sushi) rice|^rice$/.test(i[2]));
+const PF=[["all","All"],["quick","Under 30 min"],["rice","Rice"],["noodles","Noodles"],["pasta","Pasta"],["chinese","Chinese"],["prep","Meal prep"],["own","Ours"],["hp","High protein"],["hf","High fibre"],["light","Lighter"]];
+function pfMatch(r,f){if(f==="hp")return nutOf(r).tags.includes("high protein");if(f==="hf")return nutOf(r).tags.includes("high fibre");if(f==="light")return nutOf(r).tags.includes("lighter");switch(f){case"quick":return r.time<=30;case"rice":return r.tags.includes("rice bowl")||r.ing.some(i=>/(jasmine|long grain|cooked|sushi) rice|^rice$/.test(i[2]));
   case"noodles":return r.tags.includes("noodles")||r.ing.some(i=>/noodle/.test(i[2]));case"pasta":return cuisineOf(r)==="pasta";case"chinese":return r.tags.includes("chinese")||r.tags.includes("cantonese");
   case"prep":return!!r.prep;case"own":return r.plat==="own"||r.plat==="ai";default:return true}}
 function openPicker(target){
@@ -1878,6 +2261,7 @@ document.addEventListener("change",e=>{const t=e.target;
     if(t.checked){S.mpOn=true;commit();toast("Meal prep is on. Nothing has changed yet. Mark the prep-box meals.")}
     else{pushUndo();S.mpOn=false;for(const[k]of DAYS)for(const m of["l","d"])unprep(S.week[k][m]);S.prep=S.prep.filter(b=>b.manual);commit();toast("Meal prep off. Every meal is kept as a normal meal.")}}
   else if(t.id==="wlunch"){S.wlunch=t.checked;commit()}
+  else if(t.id==="goal"){S.goal=t.value;commit();toast(t.value?`Suggestions now lean towards ${GOALS[t.value].toLowerCase()}. Tap “Suggest a week” or ↻ to use it.`:"No healthy goal: suggestions are back to normal.")}
   else if(t.dataset.cookday){const b=S.prep[+t.dataset.cookday];if(b){b.cook=t.value;commit()}}
 });
 
@@ -2292,7 +2676,9 @@ ${r.url||""}${IMP.cap&&!r.url?"\n\n"+IMP.cap:""}`;
   if(t.id==="pminus"||t.id==="pplus"){const np=Math.max(1,Math.min(12,S.people+(t.id==="pplus"?1:-1)));if(np!==S.people){const old=S.people;S.people=np;
     for(const[k]of DAYS)for(const m of["l","d"]){const s=S.week[k][m];if(s&&s.r&&s.p===old)s.p=np}
     S.prep.forEach(b=>{if(b.p%old===0)b.p=b.p/old*np});commit();toast(`Cooking for ${np}. Portions and the list are updated.`)}return}
-  if(d.fclear!==undefined){filter.plat="all";filter.cat="all";filter.tag=null;renderChips();renderBook();return}
+  if(d.nutf){filter.nut=filter.nut===d.nutf?null:d.nutf;renderChips();renderBook();return}
+  if(d.setgoal){S.goal=d.setgoal;commit();toast(`Suggestions now lean towards ${GOALS[d.setgoal].toLowerCase()}. Tap “Suggest a week” or ↻ to use it.`);return}
+  if(d.fclear!==undefined){filter.plat="all";filter.cat="all";filter.tag=null;filter.nut=null;renderChips();renderBook();return}
   if(d.cat){filter.cat=d.cat;renderChips();renderBook();return}
   if(d.plat){filter.plat=d.plat;renderChips();renderBook();return}
   if(d.tag){filter.tag=filter.tag===d.tag?null:d.tag;renderChips();renderBook();return}
