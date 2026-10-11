@@ -101,6 +101,8 @@ export default {
 
     // Claude connector: https://<worker>/mcp/<KITCHEN-CODE>
     if (p[0] === "mcp") {
+      // a link reader anyone can add as a connector (no kitchen needed): https://<worker>/mcp/links
+      if (p[1] === "links") return handleMcp(req, { public: true, RECIPES });
       const code = normCode(p[1]);
       if (!code) return json({ error: "Add your kitchen code to the end of the connector URL." }, 404);
       return handleMcp(req, { code, k: kitchen(env, code), RECIPES });

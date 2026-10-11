@@ -17,6 +17,7 @@ const TAGS = ["quick", "weeknight", "meal prep", "air fryer", "chinese", "noodle
 const INSTRUCTIONS = `This is the user's shared kitchen in the "Food with Asu" cookbook web app (UK; they shop at Sainsbury's/Waitrose and own an oven and an air fryer). Changes you make appear live in the app for everyone in the kitchen.
 - Start with kitchen_overview to see the week, pantry and how many people they cook for.
 - To find dishes, use search_recipes before inventing new ones; recipe ids come from there.
+- Group a recipe's ingredients with {heading:"Marinade"}/{heading:"Sauce"}/{heading:"To serve"} items when the dish has parts, so the list is easy to follow.
 - When you write a new recipe (on request, or from what's in the fridge), use UK supermarket ingredients, metric amounts, and put any time in the step text (e.g. "simmer 10 min") with timer_minutes so the app makes a timer. Save it with save_recipe only if the user wants it kept.
 - Prefer ingredients in their pantry; if suggesting from what they have, need at most 1-2 things to buy.
 - Planner: set_meals fills lunch/dinner slots. Don't overwrite locked slots unless asked.
@@ -283,13 +284,14 @@ async function one(msg, ctx) {
   switch (method) {
     case "initialize": {
       const v = VERSIONS.includes(params?.protocolVersion) ? params.protocolVersion : VERSIONS[1];
-      return ok({ protocolVersion: v, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "food-with-asu", title: "Food with Asu kitchen", version: "1.0.0" }, instructions: INSTRUCTIONS });
+      return ok({ protocolVersion: v, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "food-with-asu", title: ctx.public ? "Food with Asu link reader" : "Food with Asu kitchen", version: "1.0.0" },
+        instructions: ctx.public ? "Reads the caption of a recipe post (Instagram, TikTok, YouTube, Douyin share text) or a recipe website's structured recipe." : INSTRUCTIONS });
     }
     case "ping": return ok({});
-    case "tools/list": return ok({ tools: TOOLS });
+    case "tools/list": return ok({ tools: ctx.public ? TOOLS.filter(t => t.name === "read_recipe_link") : TOOLS });
     case "tools/call": {
       const f = run[params?.name];
-      if (!f) return err(-32602, `Unknown tool ${params?.name}`);
+      if (!f || (ctx.public && params?.name !== "read_recipe_link")) return err(-32602, `Unknown tool ${params?.name}`);
       try {
         const out = await f(params.arguments || {}, ctx);
         return ok({ content: [{ type: "text", text: JSON.stringify(out, null, 1) }] });
@@ -303,7 +305,7 @@ async function one(msg, ctx) {
 
 export async function handleMcp(req, ctx) {
   if (req.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST" } });
-  if (!(await ctx.k.exists())) return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Kitchen code not found. Check the connector URL in the app's Kitchen panel." } }, { status: 404 });
+  if (!ctx.public && !(await ctx.k.exists())) return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Kitchen code not found. Check the connector URL in the app's Kitchen panel." } }, { status: 404 });
   let body; try { body = await req.json(); } catch (e) { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, { status: 400 }); }
   if (Array.isArray(body)) {
     const out = (await Promise.all(body.map(m => one(m, ctx)))).filter(Boolean);
