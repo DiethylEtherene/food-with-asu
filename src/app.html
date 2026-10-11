@@ -1982,7 +1982,7 @@ function applyIngScale(r,idx,val){const base=r.ing[idx]&&r.ing[idx][0];const v=p
   SHEET_EDIT=null;keepScroll(()=>renderSheet(r))}
 function renderSheet(r){
   const p=sheetP,f=SHEET_F||scaleOf(r,p),pe=SHEET_F?Math.round(SHEET_F*r.serves*10)/10:p;
-  const ings=r.ing.map((i,idx)=>{if(i[0]==="—")return `<li class="grp">${esc(i[2])}</li>`;const[q,u,name,,note]=i;const qq=typeof q==="number"?fmtQty(q*f,u):(q==null?"to taste":"");
+  const ings=r.ing.map((i,idx)=>{if(i[0]==="—")return `<li class="grp">${esc(i[2])}</li>`;const[q,u,name,,note]=i;const qq=typeof q==="number"?fmtQty(q*f,u):(q==null?(/salt|pepper|seasoning|spice|chilli|herb|oil|sauce|vinegar|sugar|lemon|lime|garnish/i.test(name)?"to taste":""):"");
     if(typeof q==="number"&&SHEET_EDIT===idx){const cur=q*f;const v=u==="g"||u==="ml"?Math.round(cur):Math.round(cur*100)/100;
       return `<li class="scaling"><form class="qedit" id="scaleform" data-idx="${idx}"><input id="scalein" type="number" inputmode="decimal" min="0" step="any" value="${v}" aria-label="Amount of ${esc(name)}"><span class="u">${esc(u||"×")}</span><button class="ib" type="submit">OK</button></form><span>${esc(name)} <span class="note">— type how much you've got; everything else follows</span></span></li>`}
     return `<li><span class="q">${typeof q==="number"&&q>0?`<button class="qbtn${SHEET_F&&SCALED_IDX===idx?" on":""}" data-scaleing="${idx}" title="Tap to scale the recipe to this amount">${qq}</button>`:qq}</span><span>${esc(name)}${note?` <span class="note">(${esc(note)})</span>`:""}${inPantry(name)?` <span class="pin">✓ pantry</span>`:""}</span></li>`}).join("");
@@ -2510,21 +2510,44 @@ const SPONSOR_RE=/#ad\b|#sponsored|#gifted|#partner|paid partnership|\buse (my )
 function cleanCaption(t){return String(t||"").split("\n").filter(l=>!SPONSOR_RE.test(l)&&!/^\s*(#\S+\s*)+$/.test(l)).join("\n").replace(/\n{3,}/g,"\n\n").trim()}
 // "2 tbsp @kewpie mayo" -> "2 tbsp mayo (swapped from @kewpie)": a tagged brand is usually a sponsor
 function debrand(l){const m=l.match(/@[\w.]+/g);if(!m)return l;const t=l.replace(/\s*(?:from |by |using )?@[\w.]+(?:'s)?/g,"").replace(/\s{2,}/g," ").trim();return t?`${t} (swapped from ${m.join(", ")})`:l}
+// sort a caption into ingredient lines and method steps (used when there's no Claude to do it)
+const STEP_VERB=/^(add|bake|beat|blend|boil|bring|brown|chop|combine|cook|cool|cover|cut|dice|drain|drizzle|fold|fry|garnish|grate|grill|heat|knead|leave|let|marinate|mash|melt|microwave|mince|mix|peel|place|pour|preheat|press|put|reduce|remove|rest|rinse|roast|roll|saut[eé]|season|serve|set|simmer|slice|smash|soak|soften|spread|sprinkle|squeeze|steam|stir|strain|take|toast|top|topped|toss|transfer|turn|whisk|wrap|using|use|in a|once|then|carefully|gently|meanwhile|after|when|make|enjoy|finish|repeat|flip|air[- ]?fry|chill|refrigerate|freeze|scoop|shape|form|dip|coat|dredge|assemble)\b/i;
+const ING_HEAD=/^(ingredients?|you('ll)? need|what you need|shopping list|材料|食材|用料)(?=$|[\s:：(（])\s*[:：]?/i;
+const METHOD_HEAD=/^(method|instructions?|steps?|directions?|how to( make| cook)?|preparation|procedure|做法|作り方|步骤)(?=$|[\s:：(（])\s*[:：]?/i;
+const joinStep=(prev,l)=>prev+(/[.!?。,，:：]$/.test(prev)?" ":prev.split(/\s+/).length<=5&&!/[.:]/.test(prev)?": ":". ")+l;
 function splitCaption(cap){
-  const lines=cleanCaption(cap).split("\n").map(l=>l.replace(/^[^\p{L}\p{N}#½¼¾⅓⅔]+/u,"").trim()).filter(Boolean);
-  let mode=null;const ing=[],steps=[];
-  for(const l of lines){
-    if(/^(ingredients?|you('ll)? need|what you need)\b/i.test(l)&&l.length<40){mode="i";const rest=l.split(/[:：]/).slice(1).join(":").trim();if(rest)ing.push(rest);continue}
-    if(/^(method|instructions?|steps?|directions?|how to( make)?)\b/i.test(l)&&l.length<40){mode="s";continue}
-    if(mode!=="s"&&/^(for (the )?[\w ]{2,20}|sauce|marinade|dressing|topping|garnish)\s*[:：]$/i.test(l)){mode="i";ing.push("# "+l.replace(/[:：]$/,""));continue}
-    const ingLike=/^(\d|[½¼¾⅓⅔]|a (pinch|handful|splash|dash|knob)|pinch|handful|salt|pepper)/i.test(l)&&l.length<90&&!/^\d+[.)]\s/.test(l);
-    const stepLike=/^\d+[.)]\s/.test(l)||/^step \d/i.test(l)||l.length>70;
-    if(mode==="i"&&!stepLike)ing.push(l);else if(mode==="s"||stepLike)steps.push(l);else if(ingLike)ing.push(l)}
-  return{ing:ing.map(debrand),steps};
+  const raw=cleanCaption(cap).split("\n").map(l=>l.trim()).filter(Boolean);
+  let mode=null,seenIng=false,seenStep=false,numbered=false;const ing=[],steps=[];
+  for(const r0 of raw){
+    const bracket=r0.match(/^[(\[（【]\s*([^)\]）】]{2,30})\s*[)\]）】]\s*[:：]?$/);   // "(Dressing)", "【Sauce】"
+    const l=r0.replace(/^[^\p{L}\p{N}#½¼¾⅓⅔(]+/u,"").trim();if(!l)continue;
+    if(ING_HEAD.test(l)&&l.length<40){if(seenIng&&seenStep)break;   // a second ingredients list after the method = the same recipe in another language
+      if(!seenIng){ing.length=0;steps.length=0;numbered=false;seenStep=false}   // anything before the first ingredients heading was the intro
+      mode="i";seenIng=true;const rest=l.replace(ING_HEAD,"").trim();if(rest)ing.push(rest);continue}
+    if(METHOD_HEAD.test(l)&&l.length<40){mode="s";continue}
+    if(bracket&&mode!=="s"){mode="i";seenIng=true;ing.push("# "+bracket[1].trim());continue}
+    if(mode!=="s"&&/^(for (the )?[\p{L} ]{2,24}|sauce|marinade|dressing|topping|toppings|garnish|glaze|batter|filling)\s*[:：]$/iu.test(l)){mode="i";seenIng=true;ing.push("# "+l.replace(/[:：]$/,""));continue}
+    if(/^enjoy\b|^bon app/i.test(l))continue;
+    const num=l.match(/^(\d+)[.)、]\s*(.*)$/);
+    const verb=STEP_VERB.test(num?num[2]:l);
+    const sentence=/[.!?。！]$/.test(l)&&l.split(/\s+/).length>6||/\b(minutes?|mins?|until|seconds?|hours?)\b/i.test(l)&&!/^\d+\s*(g|ml|tbsp|tsp)\b/i.test(l);
+    const qty=/^(\d|[½¼¾⅓⅔]|half\b|a (pinch|handful|splash|dash|knob|few)|pinch|handful)/i.test(l)&&!num;
+    const isStep=!!num||((verb||sentence||l.length>70)&&!qty);
+    if(isStep&&(mode!=="i"||seenIng||num)){
+      if(seenIng||num)mode="s";seenStep=true;
+      if(num){numbered=true;if(/^enjoy\b|^bon app/i.test(num[2]))continue;steps.push(num[2]);continue}
+      // un-numbered lines under "1. Soften potatoes" belong to that step
+      if(numbered&&steps.length){steps[steps.length-1]=joinStep(steps[steps.length-1],l);continue}
+      steps.push(l);continue}
+    if(mode==="s"&&numbered&&steps.length){steps[steps.length-1]=joinStep(steps[steps.length-1],l);continue}
+    if(mode==="i"||qty)ing.push(l)}
+  return{ing:ing.map(debrand),steps:steps.map(x=>x.replace(/\s{2,}/g," ").trim())};
 }
 const impHasRecipe=()=>!!(IMP.res&&(IMP.res.recipe||splitCaption(IMP.cap).ing.length>=3));
 function impName(){const r=IMP.res||{};if(r.recipe&&r.recipe.name)return r.recipe.name;if(r.title)return r.title.replace(/\s*[|\-–].*$/,"");
-  const first=cleanCaption(IMP.cap).split("\n").map(l=>l.replace(/^[^\p{L}\p{N}]+/u,"").replace(/#\S+/g,"").trim())
+  // "Recipe レシピ👇THE BEST Potato Salad😫 this is…" → "The Best Potato Salad"
+  const first=cleanCaption(IMP.cap).split("\n").map(l=>l.replace(/^[^\p{L}\p{N}]+/u,"").replace(/^((recipe|recipes|レシピ|食谱|菜谱)[\s:：]*[^\p{L}\p{N}]*)+/iu,"")
+      .split(/\p{Extended_Pictographic}/u)[0].split(/[!！。]|\s[-–|]\s/)[0].replace(/#\S+/g,"").trim())
     .find(l=>l.length>2&&!/\b(ep|episode|part|day|pt)\.?\s*\d+|^(ingredients?|recipe)\b/i.test(l))||"";
   const t=first.slice(0,60);return t===t.toUpperCase()&&/[A-Z]/.test(t)?t.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):t}
 function impToMk(){const r=IMP.res||{},d=mkBlank();d.link=r.url||"";d.by=r.author?((r.platform==="instagram"||r.platform==="tiktok")&&!r.author.startsWith("@")?"@"+r.author:r.author):"";d.n=impName();d.notes=IMP.cap;
@@ -2604,6 +2627,7 @@ function guessAisle(name){
 }
 function parseIng(line){
   let t=line.trim().replace(/^[-•*·]\s*/,"");if(!t)return null;
+  t=t.replace(/^(a )?half( an?| of( an?)?)?\s+/i,"½ ").replace(/^(a )?quarter( of( an?)?)?\s+/i,"¼ ");
   if(/^#|:$/.test(t))return["—","",t.replace(/^#+\s*/,"").replace(/:$/,"")];
   let q=null,u="";
   const m=t.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?|[½¼¾⅓⅔])\s*([½¼¾⅓⅔])?\s*/);
